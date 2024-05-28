@@ -1,0 +1,279 @@
+package mediate
+
+import (
+	"github.com/kjbreil/mediate/pkg/movies"
+	"github.com/kjbreil/mediate/pkg/shows"
+	"golift.io/starr/radarr"
+	"golift.io/starr/sonarr"
+	"path/filepath"
+)
+
+func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error) {
+	for _, show := range m.Shows.Slice() {
+		if show.Library.Title == "Kids TV Shows" {
+			continue
+		}
+
+		if e := show.Episodes.OnlyPilot(); e != nil {
+			err := m.plex.UnScrobble(e.PlexRatingKey)
+			if err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+
+	return
+}
+
+// SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored
+func (m *Mediate) SetMonitored() {
+
+	for _, show := range m.Shows.Slice() {
+
+		if show.LibraryTitle() == "Kids TV Shows" {
+			continue
+		}
+		if show.Title != "Workaholics" {
+			continue
+		}
+
+		err := m.RefreshShow(show)
+		if err != nil {
+			continue
+		}
+
+		// if the show is continuing and rating is above 5 then set future episodes to be downloaded
+		if show.Continuing {
+			if show.Rating >= 5 && show.Rating <= 8 {
+				var ser *sonarr.Series
+				ser, err = m.sonarr.GetSeriesByID(show.SonarrId)
+				if err != nil {
+					panic(err)
+				}
+
+				for _, sea := range ser.Seasons {
+					sea.Monitored = false
+				}
+
+				_, err = m.sonarr.UpdateSeries(ser, false)
+				if err != nil {
+					return
+				}
+				episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
+						return false
+					}
+					return true
+				})
+				err = m.MonitorEpisodes(episodes, false)
+				if err != nil {
+					return
+				}
+
+				episodes = m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+					if s.SonarrId != show.SonarrId {
+						return false
+					}
+					if e.IsPilot() && !e.Wanted {
+						return true
+					}
+					if e.Wanted {
+						return false
+					}
+					if e.HasNotAired() {
+						return true
+					}
+					if e.PlexRatingKey == "" {
+						return false
+					}
+					if !e.Watched {
+						return true
+					}
+					return false
+				})
+				err = m.MonitorEpisodes(episodes, true)
+				if err != nil {
+					continue
+				}
+
+				err = m.RefreshShow(show)
+				if err != nil {
+					continue
+				}
+
+				episodes = show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
+				m.DownloadEpisodes(episodes)
+
+			}
+			if show.Rating < 5 {
+				var ser *sonarr.Series
+
+				ser, err = m.sonarr.GetSeriesByID(show.SonarrId)
+				if err != nil {
+					panic(err)
+				}
+
+				for _, sea := range ser.Seasons {
+					sea.Monitored = false
+				}
+				episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
+						return false
+					}
+					return true
+				})
+				err = m.MonitorEpisodes(episodes, false)
+				if err != nil {
+					continue
+				}
+			}
+		} else {
+			if show.Rating < 9 {
+				err = m.UnMonitorAll(show)
+				if err != nil {
+					continue
+				}
+				err = m.MonitorPilot(show)
+				if err != nil {
+					continue
+				}
+				episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
+				m.DownloadEpisodes(episodes)
+			}
+
+			if show.Rating >= 9 {
+				err = m.MonitorAll(show)
+				if err != nil {
+					continue
+				}
+			}
+
+		}
+
+		episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
+		m.DownloadEpisodes(episodes)
+	}
+
+}
+
+func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
+	var toDelete []int64
+
+	for _, ep := range episodes {
+		if ep.Wanted {
+			toDelete = append(toDelete, ep.SonarrId)
+		}
+	}
+
+	if len(toDelete) > 0 {
+		_, err := m.sonarr.MonitorEpisode(toDelete, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, ep := range episodes {
+		if ep.HasFile {
+			err := m.sonarr.DeleteEpisodeFile(ep.SonarrFileId)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *Mediate) MonitorEpisodes(episodes shows.EpisodesArr, toMonitor bool) error {
+	_, err := m.sonarr.MonitorEpisode(episodes.SonarrIds(), toMonitor)
+	return err
+}
+
+func (m *Mediate) UnMonitorAll(show *shows.Show) error {
+	episodes := show.GetEpisodes()
+	err := m.MonitorEpisodes(episodes, false)
+	if err != nil {
+		return err
+	}
+	ser, err := m.sonarr.GetSeriesByID(show.SonarrId)
+	ser.Monitored = true
+	if err != nil {
+		panic(err)
+	}
+
+	for _, sea := range ser.Seasons {
+		sea.Monitored = false
+	}
+
+	_, err = m.sonarr.UpdateSeries(ser, false)
+	if err != nil {
+		return err
+	}
+
+	return m.RefreshShow(show)
+}
+
+func (m *Mediate) MonitorAll(show *shows.Show) error {
+	episodes := show.GetEpisodes()
+	err := m.MonitorEpisodes(episodes, true)
+	if err != nil {
+		return err
+	}
+
+	ser, err := m.sonarr.GetSeriesByID(show.SonarrId)
+	if err != nil {
+		return err
+	}
+
+	for _, sea := range ser.Seasons {
+		sea.Monitored = sea.SeasonNumber != 0
+	}
+
+	_, err = m.sonarr.UpdateSeries(ser, false)
+	if err != nil {
+		return err
+	}
+
+	return m.RefreshShow(show)
+}
+
+func (m *Mediate) MonitorPilot(show *shows.Show) error {
+	episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+		if s.SonarrId != show.SonarrId {
+			return false
+		}
+		if e.IsPilot() && !e.Wanted {
+			return true
+		}
+
+		return false
+	})
+	err := m.MonitorEpisodes(episodes, true)
+	if err != nil {
+		return err
+	}
+	return m.RefreshShow(show)
+}
+
+func (m *Mediate) DeleteMovies(moviesList []*movies.Movie) error {
+	for _, mov := range moviesList {
+		err := m.radarr.DeleteMovie(mov.RadarrID, true, false)
+		if err != nil {
+			return err
+		}
+		_, err = m.radarr.AddMovie(&radarr.AddMovieInput{
+			RootFolderPath:   filepath.Dir(mov.Path),
+			TmdbID:           int64(mov.TmdbID),
+			QualityProfileID: mov.QualityProfileID,
+			Monitored:        false,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Mediate) refreshPlexLibraries() {
+	// m.plex
+}
