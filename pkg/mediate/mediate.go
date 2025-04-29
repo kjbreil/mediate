@@ -2,17 +2,17 @@ package mediate
 
 import (
 	"context"
-	"database/sql"
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/go-plex/plex"
-	"github.com/kjbreil/mediate/model"
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
+	"github.com/kjbreil/mediate/pkg/store"
 	"golift.io/starr"
 	"golift.io/starr/radarr"
 	"golift.io/starr/sonarr"
 	"log/slog"
+	"time"
 )
 
 type Mediate struct {
@@ -21,14 +21,12 @@ type Mediate struct {
 	radarr *radarr.Radarr
 	logger *slog.Logger
 
-	Shows  *shows.Shows
 	Movies movies.Movies
 	config config.Config
 
-	ctx     context.Context
-	cancel  context.CancelFunc
-	db      *sql.DB
-	queries *model.Queries
+	ctx    context.Context
+	cancel context.CancelFunc
+	DB     *store.Store
 }
 
 func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
@@ -39,7 +37,6 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		radarr: nil,
 		logger: slog.Default(),
 		config: c,
-		Shows:  shows.NewShows(),
 		Movies: make(movies.Movies),
 	}
 	m.ctx, m.cancel = context.WithCancel(context.Background())
@@ -53,10 +50,11 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		return nil, err
 	}
 
-	err = m.initDB()
+	m.DB, err = store.InitDB()
 	if err != nil {
 		return nil, err
 	}
+
 	sonarrConfig := starr.New(c.Sonarr.ApiKey, c.Sonarr.URL, 0)
 	m.sonarr = sonarr.New(sonarrConfig)
 
@@ -68,10 +66,19 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		return nil, err
 	}
 
+	for _, lib := range m.plex.Libraries {
+		m.DB.AddLibrary(lib)
+	}
+
 	// go func() {
-	// 	start := time.Now()
-	// 	m.plex.PopulateLibraries()()
-	// 	m.logger.Info("plex library refreshed", "duration", time.Since(start))
+	_ = m.loadShows()
+	// if err != nil {
+	// 	return
+	// }
+	start := time.Now()
+	m.plex.PopulateLibraries()()
+	m.logger.Info("plex library refreshed", "duration", time.Since(start))
+	_ = m.loadPlex()
 	// }()
 
 	err = m.loadShows()
@@ -80,11 +87,6 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 	}
 
 	err = m.loadMovies()
-	if err != nil {
-		return nil, err
-	}
-
-	err = m.loadPlex()
 	if err != nil {
 		return nil, err
 	}
@@ -102,12 +104,12 @@ func (m *Mediate) loadPlex() error {
 			}
 		}
 
-		if lib.Type == library.TypeMovie {
-			err = m.loadPlexMovies(lib)
-			if err != nil {
-				return err
-			}
-		}
+		// if lib.Type == library.TypeMovie {
+		// 	err = m.loadPlexMovies(lib)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
 
 	}
 	return nil
@@ -116,4 +118,8 @@ func (m *Mediate) loadPlex() error {
 func (m *Mediate) Close() {
 	m.cancel()
 	m.plex.Close()
+}
+
+func (m *Mediate) GetShows() *shows.Shows {
+	return m.DB.GetShows()
 }

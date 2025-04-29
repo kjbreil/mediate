@@ -21,11 +21,7 @@ func (m *Mediate) loadShows() error {
 	start := time.Now()
 	for _, ser := range allSeries {
 
-		s := m.Shows.NewShow(int(ser.TvdbID))
-
-		s.Title = ser.Title
-		s.SonarrId = ser.ID
-		s.Continuing = ser.Status == "continuing"
+		s, _ := m.DB.AddSonarrSeries(ser)
 
 		wg.Add(1)
 		buf <- struct{}{}
@@ -63,11 +59,11 @@ func (m *Mediate) UpdateDownloading() {
 		filesDownloading = append(filesDownloading, int(q.EpisodeID))
 	}
 
-	m.Shows.MarkDownloading(m.Shows.SonarrIdToTvdbId(filesDownloading...)...)
+	m.DB.MarkDownloading(m.DB.SonarrIds(filesDownloading...).TvdbIds()...)
 }
 
 func (m *Mediate) UpdateEpisode(ep *shows.Episode) {
-	m.UpdateEpisodes(m.Shows.GetShow(ep.TvdbID))
+	m.RefreshShow(m.DB.GetShow(ep.TvdbID))
 	m.UpdateDownloading()
 }
 
@@ -83,7 +79,7 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 	}
 	for _, ep := range episodes {
 
-		e := s.AddSonarrEpisode(ep)
+		e, _ := m.DB.AddSonarrEpisode(s, ep)
 
 		if ep.HasFile {
 			wg.Add(1)
@@ -101,6 +97,7 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 						e.DownloadedAt = file.DateAdded
 					}
 				}
+				m.DB.Save(e)
 			}(ep)
 		}
 	}
@@ -110,7 +107,7 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 	return nil
 }
 
-func (m *Mediate) DownloadEpisodes(episodes shows.EpisodesArr) {
+func (m *Mediate) DownloadEpisodes(episodes shows.Episodes) {
 	if len(episodes) == 0 {
 		return
 	}

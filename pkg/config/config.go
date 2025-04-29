@@ -14,6 +14,9 @@ type Plex struct {
 }
 
 func (p *Plex) Ignore(toIgnore string) bool {
+	if toIgnore == "" {
+		return true
+	}
 	for _, ig := range p.Ignored {
 		if ig == toIgnore {
 			return true

@@ -1,0 +1,29 @@
+module github.com/kjbreil/mediate
+
+go 1.22.2
+
+require (
+	github.com/jrudio/go-plex-client v0.0.0-20230508221844-834554e41d30
+	github.com/kjbreil/go-plex v0.0.0-20240502194204-449fc6fa8eec
+	golift.io/starr v0.14.0
+)
+
+require (
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jmoiron/sqlx v1.4.0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	golang.org/x/net v0.24.0 // indirect
+	gorm.io/driver/sqlite v1.5.5 // indirect
+	gorm.io/gorm v1.25.10 // indirect
+	nhooyr.io/websocket v1.8.11 // indirect
+
+)
+
+replace golift.io/starr => /Users/kjell/dev/starr
+
+replace github.com/jrudio/go-plex-client => /Users/kjell/dev/go-plex-client
+
+replace github.com/kjbreil/go-plex => /Users/kjell/dev/go-plex

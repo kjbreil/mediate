@@ -6,11 +6,12 @@ import (
 	"golift.io/starr/radarr"
 	"golift.io/starr/sonarr"
 	"path/filepath"
+	"time"
 )
 
 func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error) {
-	for _, show := range m.Shows.Slice() {
-		if show.Library.Title == "Kids TV Shows" {
+	for _, show := range *m.DB.GetShows() {
+		if show.Ignore {
 			continue
 		}
 
@@ -25,12 +26,18 @@ func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error
 	return
 }
 
+func (m *Mediate) RecentlyWatched() shows.Episodes {
+	var episodes shows.Episodes
+	m.DB.Where("last_viewed_at >?", time.Now().Add(-time.Hour*24*7)).Find(&episodes)
+	return episodes
+}
+
 // SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored
 func (m *Mediate) SetMonitored() {
 
-	for _, show := range m.Shows.Slice() {
+	for _, show := range *m.DB.GetShows() {
 
-		if show.LibraryTitle() == "Kids TV Shows" {
+		if show.Ignore {
 			continue
 		}
 		if show.Title != "Workaholics" {
@@ -59,7 +66,7 @@ func (m *Mediate) SetMonitored() {
 				if err != nil {
 					return
 				}
-				episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+				episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
 					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
 						return false
 					}
@@ -70,7 +77,7 @@ func (m *Mediate) SetMonitored() {
 					return
 				}
 
-				episodes = m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+				episodes = m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
 					if s.SonarrId != show.SonarrId {
 						return false
 					}
@@ -116,7 +123,7 @@ func (m *Mediate) SetMonitored() {
 				for _, sea := range ser.Seasons {
 					sea.Monitored = false
 				}
-				episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+				episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
 					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
 						return false
 					}
@@ -183,7 +190,7 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 	return nil
 }
 
-func (m *Mediate) MonitorEpisodes(episodes shows.EpisodesArr, toMonitor bool) error {
+func (m *Mediate) MonitorEpisodes(episodes shows.Episodes, toMonitor bool) error {
 	_, err := m.sonarr.MonitorEpisode(episodes.SonarrIds(), toMonitor)
 	return err
 }
@@ -237,7 +244,7 @@ func (m *Mediate) MonitorAll(show *shows.Show) error {
 }
 
 func (m *Mediate) MonitorPilot(show *shows.Show) error {
-	episodes := m.Shows.Find(func(s *shows.Show, e *shows.Episode) bool {
+	episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
 		if s.SonarrId != show.SonarrId {
 			return false
 		}

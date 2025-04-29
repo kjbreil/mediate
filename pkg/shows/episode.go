@@ -2,9 +2,7 @@ package shows
 
 import "time"
 
-type EpisodesArr []*Episode
-
-func (e EpisodesArr) SonarrIds() []int64 {
+func (e Episodes) SonarrIds() []int64 {
 	rtn := make([]int64, len(e))
 	for i, ep := range e {
 		rtn[i] = ep.SonarrId
@@ -12,7 +10,7 @@ func (e EpisodesArr) SonarrIds() []int64 {
 	return rtn
 }
 
-func (e EpisodesArr) HasFile(hasFile bool) EpisodesArr {
+func (e Episodes) HasFile(hasFile bool) Episodes {
 	rtn := make([]*Episode, 0)
 	for _, ep := range e {
 		if ep.HasFile == hasFile {
@@ -22,7 +20,7 @@ func (e EpisodesArr) HasFile(hasFile bool) EpisodesArr {
 	return rtn
 }
 
-func (e EpisodesArr) InPlex(inPlex bool) EpisodesArr {
+func (e Episodes) InPlex(inPlex bool) Episodes {
 	rtn := make([]*Episode, 0)
 	for _, ep := range e {
 		if ep.PlexRatingKey == "" != inPlex {
@@ -32,7 +30,7 @@ func (e EpisodesArr) InPlex(inPlex bool) EpisodesArr {
 	return rtn
 }
 
-func (e EpisodesArr) Wanted(wanted bool) EpisodesArr {
+func (e Episodes) Wanted(wanted bool) Episodes {
 	rtn := make([]*Episode, 0)
 	for _, ep := range e {
 		if ep.Wanted == wanted {
@@ -42,7 +40,7 @@ func (e EpisodesArr) Wanted(wanted bool) EpisodesArr {
 	return rtn
 }
 
-func (e EpisodesArr) Aired(aired bool) EpisodesArr {
+func (e Episodes) Aired(aired bool) Episodes {
 	now := time.Now()
 	rtn := make([]*Episode, 0)
 	for _, ep := range e {
@@ -58,7 +56,7 @@ func (e EpisodesArr) Aired(aired bool) EpisodesArr {
 	return rtn
 }
 
-func (e EpisodesArr) Downloading(downloading bool) EpisodesArr {
+func (e Episodes) Downloading(downloading bool) Episodes {
 	rtn := make([]*Episode, 0)
 	for _, ep := range e {
 		if ep.Downloading == downloading {
@@ -69,11 +67,13 @@ func (e EpisodesArr) Downloading(downloading bool) EpisodesArr {
 }
 
 type Episode struct {
-	ShowTitle string
-	Title     string
-	Season    int
-	Episode   int
-	TvdbID    int
+	ShowTitle     string
+	Title         string
+	Season        int
+	Episode       int
+	SeasonEpisode int
+	TvdbID        int `gorm:"primaryKey"`
+	ShowTvdbID    int
 
 	PlexRatingKey string
 	SonarrId      int64

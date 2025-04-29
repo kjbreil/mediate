@@ -36,6 +36,19 @@ func (pp *PlexPlaying) TimeLeft() time.Duration {
 	return 0
 }
 
+func (m *Mediate) RefreshShowsEpisodes(episodes shows.Episodes) {
+	shows := make(map[int]*shows.Show)
+
+	for _, e := range episodes {
+		if _, ok := shows[e.ShowTvdbID]; !ok {
+			shows[e.ShowTvdbID] = m.DB.GetShow(e.TvdbID)
+		}
+	}
+	for _, s := range shows {
+
+		m.RefreshShow(s)
+	}
+}
 func (m *Mediate) RefreshShow(s *shows.Show) error {
 	m.logger.Info("Refreshing show", "title", s.Title)
 	err := m.UpdateEpisodes(s)
@@ -55,7 +68,7 @@ func (m *Mediate) RefreshShow(s *shows.Show) error {
 	if err != nil {
 		return err
 	}
-	episodes := m.Shows.GetShowEpisodes(s.TvdbID).HasFile(true).InPlex(false)
+	episodes := m.DB.GetEpisodes(s.TvdbID).HasFile(true).InPlex(false)
 	if len(episodes) > 0 {
 		m.plex.ScanLibrary(s.Library)
 	}
@@ -75,62 +88,93 @@ func (m *Mediate) OnPlexPlaying(f func(pp *PlexPlaying)) {
 		defer playing.m.Unlock()
 
 		for _, ps := range n.PlaySessionStateNotification {
-			ep := m.Shows.GetEpisode(ps.RatingKey)
-			if ep != nil {
-				pp, ok := playing.playing[ep.TvdbID]
-				if !ok {
-					pp = &PlexPlaying{
-						episode: ep,
-						m:       sync.Mutex{},
-					}
-					playing.playing[ep.TvdbID] = pp
-				}
-				pp.m.Lock()
-				pp.viewed = time.Millisecond * time.Duration(ps.ViewOffset)
-				pp.Changed = false
-				if pp.state != ps.State {
-					pp.state = ps.State
-					pp.Changed = true
-					pp.changed = time.Now()
-				}
-				f(pp)
-				pp.m.Unlock()
+			ep := m.DB.GetEpisodeFromRatingKey(ps.RatingKey)
+			// if ep == nil {
+			// 	m.RefreshShow(m.DB.GetShow(ep.TvdbID))
+			// 	ep = m.DB.GetEpisodeFromRatingKey(ps.RatingKey)
+			if ep == nil {
+				return
 			}
-
+			// }
+			pp, ok := playing.playing[ep.TvdbID]
+			if !ok {
+				pp = &PlexPlaying{
+					episode: ep,
+					m:       sync.Mutex{},
+				}
+				playing.playing[ep.TvdbID] = pp
+			}
+			pp.m.Lock()
+			pp.viewed = time.Millisecond * time.Duration(ps.ViewOffset)
+			pp.Changed = false
+			if pp.state != ps.State {
+				pp.state = ps.State
+				pp.Changed = true
+				pp.changed = time.Now()
+			}
+			f(pp)
+			pp.m.Unlock()
 		}
 
 	})
-
 	m.plex.SubscribeToNotifications()
+
+	// m.plex.Webhook = plex.NewWebhook(8080, net.ParseIP("10.0.2.2"))
+	//
+	// m.plex.Webhook.OnPlay(func(w plex.WebhookEvent) {
+	// 	playing.m.Lock()
+	// 	defer playing.m.Unlock()
+	//
+	// 	ep := m.DB.GetEpisodeFromRatingKey(w.Metadata.RatingKey)
+	// 	if ep != nil {
+	// 		pp, ok := playing.playing[ep.TvdbID]
+	// 		if !ok {
+	// 			pp = &PlexPlaying{
+	// 				episode: ep,
+	// 				m:       sync.Mutex{},
+	// 			}
+	// 			playing.playing[ep.TvdbID] = pp
+	// 		}
+	// 		pp.m.Lock()
+	// 		f(pp)
+	// 		pp.m.Unlock()
+	// 	}
+	//
+	// })
+
+	// m.plex.ServeWebhook()
 
 }
 
 func (m *Mediate) loadPlexShows(lib *library.Library) error {
 
-	for _, show := range m.Shows.Slice() {
+	for _, show := range *m.DB.GetShows() {
 
-		if show.Title == "Workaholics" {
-			fmt.Println("here")
-		}
 		plexShow, _, _ := lib.Shows.FindTvdbID(show.TvdbID)
 		if plexShow == nil {
 			continue
 		}
+
 		show.PlexRatingKey = plexShow.RatingKey
 		show.Rating = plexShow.UserRating
 		show.Library = lib
 		show.Ignore = m.config.Plex.Ignore(show.LibraryTitle())
+		show.LibraryUUID = lib.UUID
 
-		for _, season := range show.Episodes {
-			for _, episode := range season {
-				_, _, plexEpisode := lib.Shows.FindTvdbID(episode.TvdbID)
-				if plexEpisode != nil {
-					episode.PlexRatingKey = plexEpisode.RatingKey
-					episode.Watched = plexEpisode.Watched
-					episode.LastViewedAt = plexEpisode.LastViewedAt
-					episode.UpdatedAt = plexEpisode.UpdatedAt
-					episode.Duration = time.Millisecond * time.Duration(plexEpisode.Duration)
-				}
+		var ss shows.Show
+		ss = *show
+		ss.Episodes = nil
+		m.DB.Save(ss)
+
+		for _, episode := range show.Episodes {
+			_, _, plexEpisode := lib.Shows.FindTvdbID(episode.TvdbID)
+			if plexEpisode != nil {
+				episode.PlexRatingKey = plexEpisode.RatingKey
+				episode.Watched = plexEpisode.Watched
+				episode.LastViewedAt = plexEpisode.LastViewedAt
+				episode.UpdatedAt = plexEpisode.UpdatedAt
+				episode.Duration = time.Millisecond * time.Duration(plexEpisode.Duration)
+				m.DB.Save(episode)
 			}
 		}
 	}

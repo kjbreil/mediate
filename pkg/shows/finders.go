@@ -77,20 +77,18 @@ func init() {
 // Show: Shark Tank, Title: VSEAT, Wedy, SORx, blinger, Season: 15, Episode: 20 LastWatched: 2024-05-05T20:56:40-07:00
 // Show: Jersey Shore: Family Vacation, Title: Happy Birthday Snooki!, Season: 7, Episode: 16 LastWatched: 2024-05-20T21:17:35-07:00
 
-func (s *Shows) Find(fn FindFunc) (rtn EpisodesArr) {
-	s.m.Lock()
-	defer s.m.Unlock()
+func (s *Shows) Find(fn FindFunc) (rtn Episodes) {
 
-	for _, show := range s.s {
+	for _, show := range *s {
 		if show.Ignore {
 			continue
 		}
 
-		for _, season := range show.Episodes {
-			for _, episode := range season {
-				if fn(show, episode) {
-					rtn = append(rtn, episode)
-				}
+		for _, episode := range show.Episodes {
+			// for _, episode := range season {
+			if fn(show, episode) {
+				rtn = append(rtn, episode)
+				// }
 			}
 		}
 	}

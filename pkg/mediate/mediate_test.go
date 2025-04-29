@@ -2,9 +2,10 @@ package mediate
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/movies"
-	"testing"
 )
 
 func TestNew(t *testing.T) {
@@ -74,6 +75,6 @@ func TestNew(t *testing.T) {
 	// m.findViewed()
 	// m.findUnwatched()
 	// m.setMonitored()
-	m.MarkOnlyPilotUnwatched()
+	// m.MarkOnlyPilotUnwatched()
 
 }

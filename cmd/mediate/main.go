@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/mediate"
+	"github.com/kjbreil/mediate/pkg/shows"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -52,54 +55,53 @@ func main() {
 	// 	if pp.Changed {
 	// 		logger.Info("Plex reporting show being watched", "title", ep.Title, "season", ep.Season, "episode", ep.Episode, "left", pp.TimeLeft().Minutes())
 	// 		m.UpdateEpisode(ep)
-	// 	}
-	//
-	// 	if pp.TimeLeft() < time.Minute*3 || ep.Watched {
-	// 		show := m.Shows.GetShow(ep.TvdbID)
-	//
-	// 		episodes := m.Shows.GetShowEpisodes(show.TvdbID).
-	// 			Downloading(true)
-	//
-	// 		episodes = append(episodes, m.Shows.GetShowEpisodes(show.TvdbID).
-	// 			HasFile(true).
-	// 			InPlex(false).
-	// 			Downloading(false)...)
-	// 		if len(episodes) > 0 {
-	// 			m.RefreshShow(show)
-	// 		}
-	// 	}
-	// 	if pp.Changed {
 	// 		m.DownloadEpisodes(
-	// 			m.Shows.GetNextXEpisodes(3, ep).
+	// 			m.DB.NextXEpisodes(3, ep).
 	// 				HasFile(false).
 	// 				Aired(true).
 	// 				Downloading(false))
 	// 	}
 	// })
 
-	// shows.WindowDuration = time.Minute * 24 * 5
-	//
-	// episodes := m.Shows.Find(shows.Finders[shows.WatchedCanDelete])
-	// for _, e := range episodes {
-	// 	fmt.Printf("Show: %s, Title: %s, Season: %d, Episode: %d\n", e.ShowTitle, e.Title, e.Season, e.Episode)
-	// }
-	//
-	// shows.WindowDuration = time.Minute * 24 * 30
-	//
-	// fmt.Printf("\n\n\n")
-	//
-	// episodes = m.Shows.Find(shows.Finders[shows.NotWatchedCanDelete])
-	// for _, e := range episodes {
-	// 	fmt.Printf("Show: %s, Title: %s, Season: %d, Episode: %d\n", e.ShowTitle, e.Title, e.Season, e.Episode)
-	// }
-	// _ = m.DeleteEpisodes(episodes)
+	shows.WindowDuration = time.Minute * 24 * 5
+
+	episodes := m.GetShows().Find(shows.Finders[shows.WatchedCanDelete])
+	for _, e := range episodes {
+		fmt.Printf("Show: %s, Title: %s, Season: %d, Episode: %d\n", e.ShowTitle, e.Title, e.Season, e.Episode)
+	}
+
+	shows.WindowDuration = time.Minute * 24 * 30
+
+	fmt.Printf("\n\n\n")
+
+	episodes = m.GetShows().Find(shows.Finders[shows.NotWatchedCanDelete])
+	for _, e := range episodes {
+		fmt.Printf("Show: %s, Title: %s, Season: %d, Episode: %d\n", e.ShowTitle, e.Title, e.Season, e.Episode)
+	}
+	_ = m.DeleteEpisodes(episodes)
 
 	// m.MonitorEpisodes(m.Shows.Find(shows.Finders[shows.AllPilots]).HasFile(false).Wanted(false), true)
 
 	// m.MarkOnlyPilotUnwatched()
 	// m.MarkOnlyPilotUnwatched()
-	m.SetMonitored()
-
+	// m.SetMonitored()
+	// episodes := m.RecentlyWatched()
+	// m.RefreshShowsEpisodes(episodes)
+	// for _, e := range episodes {
+	// 	// if e.ShowTvdbID != 211751 {
+	// 	// 	continue
+	// 	// }
+	// 	nextEpisodes := m.DB.NextXEpisodes(3, e).
+	// 		Downloading(false).
+	// 		Aired(true).
+	// 		HasFile(false)
+	//
+	// 	if len(nextEpisodes) > 0 {
+	// 		m.DownloadEpisodes(nextEpisodes)
+	// 		m.RefreshShowsEpisodes(nextEpisodes)
+	// 	}
+	//
+	// }
 	ctrlC := make(chan os.Signal, 1)
 	signal.Notify(ctrlC, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
