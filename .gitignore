@@ -20,3 +20,6 @@
 # Go workspace file
 go.work
 .DS_Store
+.idea/**
+plex-library-cache.json
+mediate.sqlite

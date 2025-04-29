@@ -1,6 +1,7 @@
 package mediate
 
 import (
+	"fmt"
 	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
 	"golift.io/starr/radarr"
@@ -164,29 +165,36 @@ func (m *Mediate) SetMonitored() {
 }
 
 func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
+	m.logger.Info(fmt.Sprintf("Deleting %d episodes", len(episodes)))
 	var toDelete []int64
 
 	for _, ep := range episodes {
 		if ep.Wanted {
 			toDelete = append(toDelete, ep.SonarrId)
+			m.logger.Info("Marking episode as unmonitored", "sonarrId", ep.SonarrId, "season", ep.Season, "episode", ep.Episode)
 		}
 	}
 
 	if len(toDelete) > 0 {
+		m.logger.Info(fmt.Sprintf("Unmonitoring %d episodes in Sonarr", len(toDelete)))
 		_, err := m.sonarr.MonitorEpisode(toDelete, false)
 		if err != nil {
+			m.logger.Error("Failed to unmonitor episodes", "err", err.Error())
 			return err
 		}
 	}
 
 	for _, ep := range episodes {
 		if ep.HasFile {
+			m.logger.Info("Deleting episode file", "sonarrFileId", ep.SonarrFileId, "season", ep.Season, "episode", ep.Episode)
 			err := m.sonarr.DeleteEpisodeFile(ep.SonarrFileId)
 			if err != nil {
+				m.logger.Error("Failed to delete episode file", "sonarrFileId", ep.SonarrFileId, "err", err.Error())
 				return err
 			}
 		}
 	}
+	m.logger.Info("Successfully completed episode deletion")
 	return nil
 }
 
