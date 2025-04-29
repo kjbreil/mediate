@@ -14,6 +14,7 @@ type Config struct {
 	Jobs            []string
 	Intervals       map[string]time.Duration
 	DefaultInterval time.Duration
+	WatchPlex       bool
 
 	// General flags
 	ConfigFile string
@@ -32,7 +33,7 @@ func ParseFlags() *Config {
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	
 	// Job selection and intervals
-	jobsFlag := flag.String("jobs", "", "Comma-separated list of jobs to run (all, monitor, download, delete, refresh, plex-watch)")
+	jobsFlag := flag.String("jobs", "", "Comma-separated list of jobs to run (all, monitor, download, delete, refresh)")
 	defaultIntervalFlag := flag.String("interval", "30m", "Default interval for all jobs")
 	
 	// Individual job intervals
@@ -40,7 +41,9 @@ func ParseFlags() *Config {
 	downloadIntervalFlag := flag.String("download-interval", "", "Interval for download job")
 	deleteIntervalFlag := flag.String("delete-interval", "", "Interval for delete job")
 	refreshIntervalFlag := flag.String("refresh-interval", "", "Interval for refresh job")
-	plexWatchIntervalFlag := flag.String("plex-watch-interval", "", "Interval for plex-watch job")
+	
+	// Watcher flags
+	flag.BoolVar(&cfg.WatchPlex, "watch-plex", false, "Enable Plex watching to trigger actions when media is played")
 	
 	// Help flag
 	flag.BoolVar(&cfg.Help, "help", false, "Show help")
@@ -68,14 +71,13 @@ func ParseFlags() *Config {
 	parseJobInterval(cfg, "download", *downloadIntervalFlag)
 	parseJobInterval(cfg, "delete", *deleteIntervalFlag)
 	parseJobInterval(cfg, "refresh", *refreshIntervalFlag)
-	parseJobInterval(cfg, "plex-watch", *plexWatchIntervalFlag)
 
 	// Parse jobs
 	if *jobsFlag == "" {
 		// Default to all jobs if none specified
-		cfg.Jobs = []string{"monitor", "download", "delete", "refresh", "plex-watch"}
+		cfg.Jobs = []string{"monitor", "download", "delete", "refresh"}
 	} else if *jobsFlag == "all" {
-		cfg.Jobs = []string{"monitor", "download", "delete", "refresh", "plex-watch"}
+		cfg.Jobs = []string{"monitor", "download", "delete", "refresh"}
 	} else {
 		cfg.Jobs = strings.Split(*jobsFlag, ",")
 		// Trim whitespace
@@ -133,13 +135,16 @@ func printHelp() {
 	fmt.Println("  mediate [options]")
 	fmt.Println("\nOptions:")
 	flag.PrintDefaults()
-	fmt.Println("\nJobs:")
+	fmt.Println("\nScheduled Jobs:")
 	fmt.Println("  monitor      - Monitor episodes and set monitoring status")
 	fmt.Println("  download     - Download episodes")
 	fmt.Println("  delete       - Delete episodes")
 	fmt.Println("  refresh      - Refresh shows and episodes")
-	fmt.Println("  plex-watch   - Watch for Plex playback events")
+	fmt.Println("\nWatchers:")
+	fmt.Println("  --watch-plex - Watch for Plex playback events and trigger actions")
 	fmt.Println("\nExamples:")
 	fmt.Println("  mediate --jobs=monitor,download --interval=1h")
 	fmt.Println("  mediate --jobs=all --delete-interval=1d --monitor-interval=30m")
+	fmt.Println("  mediate --jobs=delete --watch-plex")
+	fmt.Println("  mediate --watch-plex")
 }

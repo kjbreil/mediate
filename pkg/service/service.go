@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+// JobType represents the type of job
+type JobType int
+
+const (
+	// ScheduledJob runs at regular intervals
+	ScheduledJob JobType = iota
+	// WatcherJob runs continuously (like event listeners)
+	WatcherJob
+)
+
 // Job represents a scheduled job that runs at a specified interval
 type Job struct {
 	Name     string
@@ -16,6 +26,7 @@ type Job struct {
 	logger   *slog.Logger
 	cancel   context.CancelFunc
 	wg       *sync.WaitGroup
+	Type     JobType
 }
 
 // Service manages the execution of multiple jobs
@@ -38,7 +49,7 @@ func NewService(logger *slog.Logger) *Service {
 	}
 }
 
-// AddJob adds a new job to the service
+// AddJob adds a new scheduled job to the service
 func (s *Service) AddJob(name string, interval time.Duration, fn func() error) *Job {
 	job := &Job{
 		Name:     name,
@@ -47,6 +58,23 @@ func (s *Service) AddJob(name string, interval time.Duration, fn func() error) *
 		Fn:       fn,
 		logger:   s.logger,
 		wg:       &s.wg,
+		Type:     ScheduledJob,
+	}
+	s.jobs = append(s.jobs, job)
+	return job
+}
+
+// AddWatcherJob adds a new watcher job to the service
+// Watcher jobs run once when started and are expected to set up event listeners
+func (s *Service) AddWatcherJob(name string, fn func() error) *Job {
+	job := &Job{
+		Name:     name,
+		Interval: 0, // Not used for watcher jobs
+		Enabled:  true,
+		Fn:       fn,
+		logger:   s.logger,
+		wg:       &s.wg,
+		Type:     WatcherJob,
 	}
 	s.jobs = append(s.jobs, job)
 	return job
@@ -62,28 +90,41 @@ func (s *Service) Start() {
 	}
 }
 
-// runJob runs a job at the specified interval
+// runJob runs a job based on its type
 func (s *Service) runJob(job *Job) {
 	defer s.wg.Done()
-
-	// Run the job immediately
-	s.executeJob(job)
-
-	// Set up a ticker to run the job at the specified interval
-	ticker := time.NewTicker(job.Interval)
-	defer ticker.Stop()
 
 	jobCtx, cancel := context.WithCancel(s.ctx)
 	job.cancel = cancel
 
-	for {
-		select {
-		case <-ticker.C:
-			s.executeJob(job)
-		case <-jobCtx.Done():
-			s.logger.Info("Job stopped", "name", job.Name)
-			return
+	switch job.Type {
+	case ScheduledJob:
+		// Run the job immediately
+		s.executeJob(job)
+
+		// Set up a ticker to run the job at the specified interval
+		ticker := time.NewTicker(job.Interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.executeJob(job)
+			case <-jobCtx.Done():
+				s.logger.Info("Scheduled job stopped", "name", job.Name)
+				return
+			}
 		}
+
+	case WatcherJob:
+		// For watcher jobs, just execute once to set up the watchers
+		s.logger.Info("Starting watcher job", "name", job.Name)
+		s.executeJob(job)
+
+		// Wait for cancellation
+		<-jobCtx.Done()
+		s.logger.Info("Watcher job stopped", "name", job.Name)
+		return
 	}
 }
 

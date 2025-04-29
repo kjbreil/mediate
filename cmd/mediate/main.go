@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/kjbreil/mediate/pkg/cli"
-	"github.com/kjbreil/mediate/pkg/config"
-	"github.com/kjbreil/mediate/pkg/jobs"
-	"github.com/kjbreil/mediate/pkg/mediate"
-	"github.com/kjbreil/mediate/pkg/service"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/kjbreil/mediate/pkg/cli"
+	"github.com/kjbreil/mediate/pkg/config"
+	"github.com/kjbreil/mediate/pkg/jobs"
+	"github.com/kjbreil/mediate/pkg/mediate"
+	"github.com/kjbreil/mediate/pkg/service"
 )
 
 func main() {
@@ -80,34 +81,36 @@ func main() {
 	// Create service
 	svc := service.NewService(logger)
 
-	// Register jobs based on command-line arguments
+	// Register scheduled jobs based on command-line arguments
 	for _, jobName := range cliConfig.Jobs {
 		interval := cliConfig.GetJobInterval(jobName)
-		
+
 		switch jobName {
 		case "monitor":
 			svc.AddJob("monitor", interval, j.MonitorJob)
 			logger.Info("Registered monitor job", "interval", interval)
-			
+
 		case "download":
 			svc.AddJob("download", interval, j.DownloadJob)
 			logger.Info("Registered download job", "interval", interval)
-			
+
 		case "delete":
 			svc.AddJob("delete", interval, j.DeleteJob)
 			logger.Info("Registered delete job", "interval", interval)
-			
+
 		case "refresh":
 			svc.AddJob("refresh", interval, j.RefreshJob)
 			logger.Info("Registered refresh job", "interval", interval)
-			
-		case "plex-watch":
-			svc.AddJob("plex-watch", interval, j.PlexWatchJob)
-			logger.Info("Registered plex-watch job", "interval", interval)
-			
+
 		default:
 			logger.Warn("Unknown job", "name", jobName)
 		}
+	}
+	
+	// Register watcher jobs based on command-line flags
+	if cliConfig.WatchPlex {
+		svc.AddWatcherJob("plex-watch", j.PlexWatchJob)
+		logger.Info("Registered Plex watcher job")
 	}
 
 	// Start the service
