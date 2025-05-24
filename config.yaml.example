@@ -1,0 +1,23 @@
+# Mediate Configuration File
+
+# Plex configuration
+plex:
+  url: "http://plex.example.com:32400"
+  token: "your-plex-token"
+  ignored:
+    - "Kids TV Shows"
+    - "Kids Movies"
+
+# Sonarr configuration
+sonarr:
+  url: "http://sonarr.example.com:8989"
+  api_key: "your-sonarr-api-key"
+
+# Radarr configuration
+radarr:
+  url: "http://radarr.example.com:7878"
+  api_key: "your-radarr-api-key"
+
+# Database configuration
+database:
+  path: "mediate.sqlite"

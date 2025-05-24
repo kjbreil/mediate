@@ -16,6 +16,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	golang.org/x/net v0.24.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/sqlite v1.5.5 // indirect
 	gorm.io/gorm v1.25.10 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect

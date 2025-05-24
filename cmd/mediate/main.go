@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/kjbreil/mediate/pkg/cli"
@@ -39,35 +40,80 @@ func main() {
 	logger := slog.New(logHandler)
 
 	// Load configuration
-	var c config.Config
+	var c *config.Config
+	var err error
+	
 	if cliConfig.ConfigFile != "" {
-		// TODO: Implement config file loading
+		// Load configuration from specified file
 		logger.Info("Loading configuration from file", "file", cliConfig.ConfigFile)
+		c, err = config.LoadConfig(cliConfig.ConfigFile)
+		if err != nil {
+			logger.Error("Failed to load config file", "error", err)
+			
+			// If --create-config flag is set, create default config
+			if cliConfig.CreateConfig {
+				logger.Info("Creating default configuration file", "file", cliConfig.ConfigFile)
+				err = config.CreateDefaultConfig(cliConfig.ConfigFile)
+				if err != nil {
+					logger.Error("Failed to create config file", "error", err)
+					log.Fatalf("Failed to create config file: %v", err)
+				}
+				c, err = config.LoadConfig(cliConfig.ConfigFile)
+				if err != nil {
+					log.Fatalf("Failed to load newly created config file: %v", err)
+				}
+				logger.Info("Created and loaded default configuration")
+			} else {
+				logger.Info("Use --create-config flag to create a default configuration file")
+				log.Fatalf("Failed to load config file: %v", err)
+			}
+		}
 	} else {
-		// Use default configuration
-		c = config.Config{
-			Plex: config.Plex{
-				URL:   "http://plex1.kaygel.io:32400",
-				Token: "-HacSX44mXL1WHVACUZ5",
-				Ignored: []string{
-					"Kids TV Shows",
-					"Kids Movies",
+		// Try to load from default location
+		home, err := os.UserHomeDir()
+		if err == nil {
+			defaultPath := filepath.Join(home, ".config", "mediate", "config.yaml")
+			if _, err := os.Stat(defaultPath); err == nil {
+				logger.Info("Loading configuration from default location", "file", defaultPath)
+				c, err = config.LoadConfig(defaultPath)
+				if err != nil {
+					logger.Error("Failed to load config from default location", "error", err)
+				}
+			}
+		}
+		
+		// If no config was loaded, use hardcoded defaults
+		if c == nil {
+			logger.Warn("Using hardcoded configuration. This is not recommended for production use.")
+			logger.Info("Create a config file with --config=/path/to/config.yaml --create-config")
+			
+			c = &config.Config{
+				Plex: config.Plex{
+					URL:   "http://plex1.kaygel.io:32400",
+					Token: "-HacSX44mXL1WHVACUZ5",
+					Ignored: []string{
+						"Kids TV Shows",
+						"Kids Movies",
+					},
 				},
-			},
-			Sonarr: config.Sonarr{
-				ApiKey: "67bd04cc551149188947a0024a7f5c1e",
-				URL:    "http://10.0.1.22:8989/show/",
-			},
-			Radarr: config.Radarr{
-				ApiKey: "e2eab479a088404387c7b1b48eab5287",
-				URL:    "http://10.0.1.22:7878/film/",
-			},
+				Sonarr: config.Sonarr{
+					ApiKey: "67bd04cc551149188947a0024a7f5c1e",
+					URL:    "http://10.0.1.22:8989/show/",
+				},
+				Radarr: config.Radarr{
+					ApiKey: "e2eab479a088404387c7b1b48eab5287",
+					URL:    "http://10.0.1.22:7878/film/",
+				},
+				Database: config.Database{
+					Path: "mediate.sqlite",
+				},
+			}
 		}
 	}
 
 	// Initialize mediate
 	m, err := mediate.New(
-		c,
+		*c, // Dereference pointer to get the actual Config value
 		mediate.WithLogger(logger),
 	)
 	if err != nil {

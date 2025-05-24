@@ -17,9 +17,10 @@ type Config struct {
 	WatchPlex       bool
 
 	// General flags
-	ConfigFile string
-	LogLevel   string
-	Help       bool
+	ConfigFile   string
+	CreateConfig bool
+	LogLevel     string
+	Help         bool
 }
 
 // ParseFlags parses command-line flags and returns a Config
@@ -30,6 +31,7 @@ func ParseFlags() *Config {
 
 	// Define flags
 	flag.StringVar(&cfg.ConfigFile, "config", "", "Path to configuration file")
+	flag.BoolVar(&cfg.CreateConfig, "create-config", false, "Create a default configuration file if it doesn't exist")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	
 	// Job selection and intervals
