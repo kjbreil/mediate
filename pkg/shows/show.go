@@ -23,6 +23,13 @@ func (s *Show) GetEpisodes() Episodes {
 	return rtn
 }
 
+func (s *Show) Status() string {
+	if s.Continuing {
+		return "continuing"
+	}
+	return "ended"
+}
+
 // func (s *Show) AddSonarrEpisode(ep *sonarr.Episode) *Episode {
 // 	s.m.Lock()
 // 	defer s.m.Unlock()

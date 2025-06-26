@@ -16,6 +16,11 @@ type Config struct {
 	DefaultInterval time.Duration
 	WatchPlex       bool
 
+	// MCP server flags
+	Mode      string // "jobs" (default) or "mcp"
+	Transport string // "stdio" (default) or "http"
+	Port      int    // Port for HTTP transport
+
 	// General flags
 	ConfigFile   string
 	CreateConfig bool
@@ -33,6 +38,11 @@ func ParseFlags() *Config {
 	flag.StringVar(&cfg.ConfigFile, "config", "", "Path to configuration file")
 	flag.BoolVar(&cfg.CreateConfig, "create-config", false, "Create a default configuration file if it doesn't exist")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
+	
+	// MCP server flags
+	flag.StringVar(&cfg.Mode, "mode", "jobs", "Operating mode: 'jobs' for traditional job mode, 'mcp' for MCP server mode")
+	flag.StringVar(&cfg.Transport, "transport", "stdio", "MCP transport: 'stdio' for Claude Desktop, 'http' for web")
+	flag.IntVar(&cfg.Port, "port", 8080, "Port for HTTP transport (when using --transport=http)")
 	
 	// Job selection and intervals
 	jobsFlag := flag.String("jobs", "", "Comma-separated list of jobs to run (all, monitor, download, delete, refresh)")
@@ -137,16 +147,27 @@ func printHelp() {
 	fmt.Println("  mediate [options]")
 	fmt.Println("\nOptions:")
 	flag.PrintDefaults()
-	fmt.Println("\nScheduled Jobs:")
+	fmt.Println("\nOperating Modes:")
+	fmt.Println("  jobs         - Traditional job mode (default)")
+	fmt.Println("  mcp          - MCP server mode for Claude Desktop integration")
+	fmt.Println("\nScheduled Jobs (jobs mode):")
 	fmt.Println("  monitor      - Monitor episodes and set monitoring status")
 	fmt.Println("  download     - Download episodes")
 	fmt.Println("  delete       - Delete episodes")
 	fmt.Println("  refresh      - Refresh shows and episodes")
-	fmt.Println("\nWatchers:")
+	fmt.Println("\nWatchers (jobs mode):")
 	fmt.Println("  --watch-plex - Watch for Plex playback events and trigger actions")
+	fmt.Println("\nMCP Transports (mcp mode):")
+	fmt.Println("  stdio        - Standard input/output for Claude Desktop (default)")
+	fmt.Println("  http         - HTTP server for web integrations")
 	fmt.Println("\nExamples:")
+	fmt.Println("  # Traditional job mode")
 	fmt.Println("  mediate --jobs=monitor,download --interval=1h")
 	fmt.Println("  mediate --jobs=all --delete-interval=1d --monitor-interval=30m")
 	fmt.Println("  mediate --jobs=delete --watch-plex")
 	fmt.Println("  mediate --watch-plex")
+	fmt.Println()
+	fmt.Println("  # MCP server mode")
+	fmt.Println("  mediate --mode=mcp --transport=stdio")
+	fmt.Println("  mediate --mode=mcp --transport=http --port=8080")
 }

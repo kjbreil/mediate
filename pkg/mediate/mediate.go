@@ -50,7 +50,7 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		return nil, err
 	}
 
-	m.DB, err = store.InitDB()
+	m.DB, err = store.InitDBWithPath(c.Database.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -70,28 +70,72 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		m.DB.AddLibrary(lib)
 	}
 
-	// go func() {
-	_ = m.loadShows()
-	// if err != nil {
-	// 	return
-	// }
+	return &m, nil
+}
+
+// NewForMCP creates a new Mediate instance with fast initialization for MCP mode
+// Heavy data loading is deferred to background goroutines
+func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
+	m, err := New(c, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start heavy data loading in background to avoid blocking MCP initialization
+	go func() {
+		m.logger.Info("Starting background data loading for MCP mode")
+		
+		// Load shows data
+		start := time.Now()
+		if err := m.loadShows(); err != nil {
+			m.logger.Error("Failed to load shows", "error", err)
+		} else {
+			m.logger.Info("Background shows loading completed", "duration", time.Since(start))
+		}
+
+		// Populate Plex libraries
+		start = time.Now()
+		m.plex.PopulateLibraries()()
+		m.logger.Info("Background plex library refresh completed", "duration", time.Since(start))
+		
+		// Load Plex data
+		if err := m.loadPlex(); err != nil {
+			m.logger.Error("Failed to load plex data", "error", err)
+		}
+
+		// Load movies
+		if err := m.loadMovies(); err != nil {
+			m.logger.Error("Failed to load movies", "error", err)
+		}
+
+		m.logger.Info("Background data loading completed")
+	}()
+
+	return m, nil
+}
+
+// LoadDataSync loads all data synchronously (for traditional job mode)
+func (m *Mediate) LoadDataSync() error {
+	err := m.loadShows()
+	if err != nil {
+		return err
+	}
+
 	start := time.Now()
 	m.plex.PopulateLibraries()()
 	m.logger.Info("plex library refreshed", "duration", time.Since(start))
-	_ = m.loadPlex()
-	// }()
-
-	err = m.loadShows()
+	
+	err = m.loadPlex()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = m.loadMovies()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &m, nil
+	return nil
 }
 
 func (m *Mediate) loadPlex() error {
@@ -122,4 +166,8 @@ func (m *Mediate) Close() {
 
 func (m *Mediate) GetShows() *shows.Shows {
 	return m.DB.GetShows()
+}
+
+func (m *Mediate) Config() config.Config {
+	return m.config
 }

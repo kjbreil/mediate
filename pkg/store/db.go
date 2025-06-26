@@ -2,6 +2,8 @@ package store
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/mediate/pkg/shows"
 	_ "github.com/mattn/go-sqlite3"
@@ -16,12 +18,30 @@ type Store struct {
 }
 
 func InitDB() (*Store, error) {
+	return InitDBWithPath("mediate.sqlite")
+}
 
+func InitDBWithPath(dbPath string) (*Store, error) {
 	s := &Store{
 		libraries: make(map[string]*library.Library),
 	}
-	var err error
-	db, err := gorm.Open(sqlite.Open("mediate.sqlite"), &gorm.Config{
+	
+	// Convert to absolute path if it's relative
+	if !filepath.IsAbs(dbPath) {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home directory: %v", err)
+		}
+		dbPath = filepath.Join(homeDir, ".local", "share", "mediate", dbPath)
+	}
+	
+	// Create directory if it doesn't exist
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %v", err)
+	}
+	
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -34,6 +54,10 @@ func InitDB() (*Store, error) {
 		&shows.Show{},
 		&shows.Episode{},
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run database migrations: %v", err)
+	}
+	
 	return s, nil
 }
 

@@ -1,10 +1,10 @@
 package store
 
 import (
-	"fmt"
+	"time"
+
 	"github.com/kjbreil/mediate/pkg/shows"
 	"golift.io/starr/sonarr"
-	"time"
 )
 
 func (s *Store) AddSonarrSeries(ser *sonarr.Series) (*shows.Show, error) {
@@ -25,9 +25,6 @@ func (s *Store) AddSonarrSeries(ser *sonarr.Series) (*shows.Show, error) {
 func (s *Store) AddSonarrEpisode(sh *shows.Show, ep *sonarr.Episode) (*shows.Episode, error) {
 	var e shows.Episode
 
-	if ep.TvdbID == 10104201 {
-		fmt.Println("here")
-	}
 	var airDate *time.Time
 	if parse, err := time.Parse("2006-01-02", ep.AirDate); err == nil {
 		airDate = &parse

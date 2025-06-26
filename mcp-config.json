@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "mediate": {
+      "command": "/path/to/mediate/bin/mediate",
+      "args": [
+        "--mode=mcp",
+        "--transport=stdio",
+        "--config=/path/to/your/config.yaml"
+      ],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/kjbreil/mediate/pkg/cli"
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/jobs"
+	"github.com/kjbreil/mediate/pkg/mcp"
 	"github.com/kjbreil/mediate/pkg/mediate"
 	"github.com/kjbreil/mediate/pkg/service"
 )
@@ -34,7 +36,13 @@ func main() {
 		logLevel = slog.LevelInfo
 	}
 
-	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	// In MCP mode, log to stderr to avoid interfering with JSON-RPC on stdout
+	logOutput := os.Stdout
+	if cliConfig.Mode == "mcp" {
+		logOutput = os.Stderr
+	}
+
+	logHandler := slog.NewTextHandler(logOutput, &slog.HandlerOptions{
 		Level: logLevel,
 	})
 	logger := slog.New(logHandler)
@@ -111,7 +119,24 @@ func main() {
 		}
 	}
 
-	// Initialize mediate
+	// Check operating mode
+	if cliConfig.Mode == "mcp" {
+		// Initialize mediate with fast loading for MCP mode
+		m, err := mediate.NewForMCP(
+			*c, // Dereference pointer to get the actual Config value
+			mediate.WithLogger(logger),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer m.Close()
+		
+		// Run MCP server mode
+		runMCPServer(m, logger, cliConfig)
+		return
+	}
+
+	// Initialize mediate for traditional job mode
 	m, err := mediate.New(
 		*c, // Dereference pointer to get the actual Config value
 		mediate.WithLogger(logger),
@@ -120,6 +145,60 @@ func main() {
 		log.Fatal(err)
 	}
 	defer m.Close()
+
+	// Load data synchronously for job mode
+	err = m.LoadDataSync()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Traditional job mode
+	runJobMode(m, logger, cliConfig)
+}
+
+// runMCPServer runs the application in MCP server mode
+func runMCPServer(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
+	logger.Info("Starting Mediate in MCP server mode", 
+		"transport", cliConfig.Transport, 
+		"port", cliConfig.Port)
+
+	// Create MCP server
+	mcpServer := mcp.NewMediateServer(m, logger)
+
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start server in a goroutine
+	go func() {
+		if err := mcpServer.Start(ctx); err != nil {
+			logger.Error("MCP server error", "error", err)
+			cancel()
+		}
+	}()
+
+	// Wait for interrupt signal
+	logger.Info("MCP server started, press Ctrl+C to stop")
+	ctrlC := make(chan os.Signal, 1)
+	signal.Notify(ctrlC, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	
+	select {
+	case <-ctrlC:
+		logger.Info("Received interrupt signal")
+	case <-ctx.Done():
+		logger.Info("Context cancelled")
+	}
+
+	// Shutdown
+	logger.Info("Shutting down MCP server")
+	cancel()
+	mcpServer.Close()
+	logger.Info("MCP server stopped")
+}
+
+// runJobMode runs the application in traditional job mode
+func runJobMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
+	logger.Info("Starting Mediate in job mode")
 
 	// Create jobs
 	j := jobs.New(m, logger)
