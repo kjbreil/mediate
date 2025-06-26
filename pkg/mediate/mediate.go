@@ -171,3 +171,17 @@ func (m *Mediate) GetShows() *shows.Shows {
 func (m *Mediate) Config() config.Config {
 	return m.config
 }
+
+// TriggerEpisodeSearch triggers a search for specific episodes in Sonarr
+func (m *Mediate) TriggerEpisodeSearch(episodeIDs []int64) error {
+	if len(episodeIDs) == 0 {
+		return nil
+	}
+	
+	_, err := m.sonarr.SendCommand(&sonarr.CommandRequest{
+		Name:       "EpisodeSearch",
+		EpisodeIDs: episodeIDs,
+	})
+	
+	return err
+}

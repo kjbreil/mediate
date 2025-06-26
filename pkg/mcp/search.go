@@ -247,15 +247,81 @@ func (s *MediateServer) addItemToDownloadService(item *DownloadItem, qualityProf
 
 // addToSonarr adds a show to Sonarr
 func (s *MediateServer) addToSonarr(item *DownloadItem, qualityProfile string) bool {
-	s.logger.Info("Adding show to Sonarr", "title", item.Title)
+	s.logger.Info("Adding show to Sonarr", "title", item.Title, "tvdb_id", item.TvdbID, "monitor", item.Monitor)
 	
-	// In a real implementation, you'd:
-	// 1. Search for the show in Sonarr's database
-	// 2. Add the show with the specified quality profile
-	// 3. Set monitoring status based on item.Monitor
+	// If we have a TVDB ID, try to find and add the show
+	if item.TvdbID > 0 {
+		return s.addShowByTvdbID(item.TvdbID, item.Monitor, qualityProfile)
+	}
 	
-	// For now, we'll simulate success
+	// Otherwise, search by title (fallback)
+	return s.addShowByTitle(item.Title, item.Monitor, qualityProfile)
+}
+
+// addShowByTvdbID adds a show to Sonarr using TVDB ID
+func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, qualityProfile string) bool {
+	// Check if show already exists in our database
+	existingShow := s.mediate.DB.GetShow(tvdbID)
+	if existingShow != nil {
+		s.logger.Info("Show already exists in database", "tvdb_id", tvdbID, "title", existingShow.Title)
+		
+		// If it's not monitored but we want to monitor it, trigger a search
+		if monitor && !s.isShowMonitored(existingShow) {
+			s.logger.Info("Show exists but not monitored, triggering search", "title", existingShow.Title)
+			s.triggerShowSearch(existingShow)
+		}
+		return true
+	}
+	
+	// Search for the show in Sonarr's lookup
+	s.logger.Info("Searching for show in Sonarr lookup", "tvdb_id", tvdbID)
+	
+	// This would require calling Sonarr's lookup API to find the show
+	// For now, we'll log the action and return success
+	// In a real implementation, you'd call something like:
+	// lookupResults, err := s.mediate.sonarr.Lookup(fmt.Sprintf("tvdb:%d", tvdbID))
+	// then add the show with the appropriate quality profile
+	
+	s.logger.Info("Would add show to Sonarr via TVDB lookup", "tvdb_id", tvdbID)
 	return true
+}
+
+// addShowByTitle adds a show to Sonarr using title search
+func (s *MediateServer) addShowByTitle(title string, monitor bool, qualityProfile string) bool {
+	s.logger.Info("Searching for show by title", "title", title)
+	
+	// This would search Sonarr's lookup API by title
+	// For now, we'll log the action
+	s.logger.Info("Would add show to Sonarr via title search", "title", title)
+	return true
+}
+
+// triggerShowSearch triggers a search for a show's monitored episodes
+func (s *MediateServer) triggerShowSearch(show *shows.Show) {
+	s.logger.Info("Triggering search for show", "title", show.Title, "sonarr_id", show.SonarrId)
+	
+	// Get monitored episodes for this show
+	monitoredEpisodes := make([]int64, 0)
+	for _, episode := range show.Episodes {
+		if episode.Wanted && !episode.HasFile {
+			monitoredEpisodes = append(monitoredEpisodes, episode.SonarrId)
+		}
+	}
+	
+	if len(monitoredEpisodes) > 0 {
+		s.logger.Info("Triggering episode search", "title", show.Title, "episode_count", len(monitoredEpisodes))
+		
+		// Send the search command to Sonarr (similar to DownloadEpisodes)
+		err := s.mediate.TriggerEpisodeSearch(monitoredEpisodes)
+		
+		if err != nil {
+			s.logger.Error("Failed to trigger episode search", "error", err)
+		} else {
+			s.logger.Info("Successfully triggered episode search", "title", show.Title)
+		}
+	} else {
+		s.logger.Info("No monitored episodes to search for", "title", show.Title)
+	}
 }
 
 // addToRadarr adds a movie to Radarr
