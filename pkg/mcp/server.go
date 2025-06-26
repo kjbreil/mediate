@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/kjbreil/mediate/pkg/mediate"
+	"github.com/kjbreil/mediate/pkg/store"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -311,4 +312,14 @@ func (s *MediateServer) Start(ctx context.Context) error {
 func (s *MediateServer) Close() error {
 	s.logger.Info("Shutting down Mediate MCP server")
 	return nil
+}
+
+// GetMediate returns the underlying Mediate instance
+func (s *MediateServer) GetMediate() *mediate.Mediate {
+	return s.mediate
+}
+
+// GetDB returns the database instance
+func (s *MediateServer) GetDB() *store.Store {
+	return s.mediate.DB
 }

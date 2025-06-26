@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/kjbreil/mediate/pkg/analysis"
 	"github.com/kjbreil/mediate/pkg/cli"
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/jobs"
@@ -117,6 +118,29 @@ func main() {
 				},
 			}
 		}
+	}
+
+	// Check for analysis mode first
+	if cliConfig.Analyze || cliConfig.ScanDeleted {
+		// Initialize mediate for analysis
+		m, err := mediate.New(
+			*c, // Dereference pointer to get the actual Config value
+			mediate.WithLogger(logger),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer m.Close()
+
+		// Load data for analysis
+		err = m.LoadDataSync()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Run analysis
+		runAnalysisMode(m, logger, cliConfig)
+		return
 	}
 
 	// Check operating mode
@@ -252,4 +276,15 @@ func runJobMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) 
 	logger.Info("Stopping service")
 	svc.Stop()
 	logger.Info("Service stopped")
+}
+
+// runAnalysisMode runs the application in analysis mode
+func runAnalysisMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
+	logger.Info("Starting Mediate in analysis mode")
+
+	err := analysis.RunAnalysis(cliConfig, m, logger)
+	if err != nil {
+		logger.Error("Analysis failed", "error", err)
+		os.Exit(1)
+	}
 }

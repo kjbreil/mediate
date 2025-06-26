@@ -21,6 +21,12 @@ type Config struct {
 	Transport string // "stdio" (default) or "http"
 	Port      int    // Port for HTTP transport
 
+	// Analysis flags
+	Analyze      bool   // Run analysis mode
+	AnalyzeShow  string // Specific show to analyze
+	AnalyzeType  string // Type of analysis: "show", "episodes", "deleted", "habits"
+	ScanDeleted  bool   // Scan for deleted media
+
 	// General flags
 	ConfigFile   string
 	CreateConfig bool
@@ -57,6 +63,12 @@ func ParseFlags() *Config {
 	// Watcher flags
 	flag.BoolVar(&cfg.WatchPlex, "watch-plex", false, "Enable Plex watching to trigger actions when media is played")
 	
+	// Analysis flags
+	flag.BoolVar(&cfg.Analyze, "analyze", false, "Run analysis mode")
+	flag.StringVar(&cfg.AnalyzeShow, "show", "", "Specific show to analyze")
+	flag.StringVar(&cfg.AnalyzeType, "type", "habits", "Type of analysis: 'show', 'episodes', 'deleted', 'habits'")
+	flag.BoolVar(&cfg.ScanDeleted, "scan-deleted", false, "Scan for deleted media")
+
 	// Help flag
 	flag.BoolVar(&cfg.Help, "help", false, "Show help")
 	flag.BoolVar(&cfg.Help, "h", false, "Show help (shorthand)")
@@ -170,4 +182,11 @@ func printHelp() {
 	fmt.Println("  # MCP server mode")
 	fmt.Println("  mediate --mode=mcp --transport=stdio")
 	fmt.Println("  mediate --mode=mcp --transport=http --port=8080")
+	fmt.Println()
+	fmt.Println("  # Analysis mode")
+	fmt.Println("  mediate --analyze --type=habits")
+	fmt.Println("  mediate --analyze --type=show --show=\"What We Do in the Shadows\"")
+	fmt.Println("  mediate --analyze --type=episodes --show=\"What We Do in the Shadows\"")
+	fmt.Println("  mediate --analyze --type=deleted")
+	fmt.Println("  mediate --scan-deleted")
 }
