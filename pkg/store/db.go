@@ -53,6 +53,7 @@ func InitDBWithPath(dbPath string) (*Store, error) {
 	err = s.DB.AutoMigrate(
 		&shows.Show{},
 		&shows.Episode{},
+		&shows.ViewingSession{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run database migrations: %v", err)

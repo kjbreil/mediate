@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/kjbreil/mediate/pkg/shows"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -92,7 +94,6 @@ func (s *MediateServer) handleGetRecommendations(ctx context.Context, request mc
 	// Parse arguments
 	mediaType := "shows" // default
 	basis := "viewing_history" // default
-	limit := 10 // default
 
 	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
 		if mt, exists := args["type"]; exists {
@@ -105,15 +106,10 @@ func (s *MediateServer) handleGetRecommendations(ctx context.Context, request mc
 				basis = bStr
 			}
 		}
-		if l, exists := args["limit"]; exists {
-			if lFloat, ok := l.(float64); ok {
-				limit = int(lFloat)
-			}
-		}
 	}
 
 	// Generate recommendations
-	recommendations := s.generateRecommendations(mediaType, basis, limit)
+	recommendations := s.generateRecommendations(mediaType, basis, 0)
 
 	// Convert to JSON
 	resultJSON, err := json.MarshalIndent(recommendations, "", "  ")
@@ -264,6 +260,171 @@ func (s *MediateServer) handleGetSystemStatus(ctx context.Context, request mcp.C
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.NewTextContent(fmt.Sprintf("Error marshaling system status: %v", err)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.NewTextContent(string(resultJSON)),
+		},
+	}, nil
+}
+// handleAnalyzeShow handles the analyze_show tool
+func (s *MediateServer) handleAnalyzeShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Info("Handling analyze_show request")
+
+	// Parse arguments
+	var showTitle string
+	var tvdbID int
+	timeframe := "all"
+	var user string
+
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if st, exists := args["show_title"]; exists {
+			if stStr, ok := st.(string); ok {
+				showTitle = stStr
+			}
+		}
+		if tid, exists := args["tvdb_id"]; exists {
+			if tidFloat, ok := tid.(float64); ok {
+				tvdbID = int(tidFloat)
+			}
+		}
+		if tf, exists := args["timeframe"]; exists {
+			if tfStr, ok := tf.(string); ok {
+				timeframe = tfStr
+			}
+		}
+		if u, exists := args["user"]; exists {
+			if uStr, ok := u.(string); ok {
+				user = uStr
+			}
+		}
+	}
+
+	// Find the show
+	var targetShow *shows.Show
+	if tvdbID > 0 {
+		targetShow = s.mediate.DB.GetShow(tvdbID)
+	} else if showTitle != "" {
+		// Search for show by title
+		allShows := s.mediate.GetShows()
+		if allShows != nil {
+			for _, show := range *allShows {
+				if strings.EqualFold(show.Title, showTitle) {
+					targetShow = show
+					break
+				}
+			}
+		}
+	}
+
+	if targetShow == nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent("Error: Show not found"),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	// Analyze the show
+	analysis := s.analyzeIndividualShow(targetShow, timeframe, user)
+
+	// Convert to JSON
+	resultJSON, err := json.MarshalIndent(analysis, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error marshaling show analysis: %v", err)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.NewTextContent(string(resultJSON)),
+		},
+	}, nil
+}
+
+// handleAnalyzeEpisodes handles the analyze_episodes tool
+func (s *MediateServer) handleAnalyzeEpisodes(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Info("Handling analyze_episodes request")
+
+	// Parse arguments
+	var showTitle string
+	var tvdbID int
+	var season int
+	var user string
+	sortBy := "episode_number"
+
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if st, exists := args["show_title"]; exists {
+			if stStr, ok := st.(string); ok {
+				showTitle = stStr
+			}
+		}
+		if tid, exists := args["tvdb_id"]; exists {
+			if tidFloat, ok := tid.(float64); ok {
+				tvdbID = int(tidFloat)
+			}
+		}
+		if s, exists := args["season"]; exists {
+			if sFloat, ok := s.(float64); ok {
+				season = int(sFloat)
+			}
+		}
+		if u, exists := args["user"]; exists {
+			if uStr, ok := u.(string); ok {
+				user = uStr
+			}
+		}
+		if sb, exists := args["sort_by"]; exists {
+			if sbStr, ok := sb.(string); ok {
+				sortBy = sbStr
+			}
+		}
+	}
+
+	// Find the show
+	var targetShow *shows.Show
+	if tvdbID > 0 {
+		targetShow = s.mediate.DB.GetShow(tvdbID)
+	} else if showTitle != "" {
+		// Search for show by title
+		allShows := s.mediate.GetShows()
+		if allShows != nil {
+			for _, show := range *allShows {
+				if strings.EqualFold(show.Title, showTitle) {
+					targetShow = show
+					break
+				}
+			}
+		}
+	}
+
+	if targetShow == nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent("Error: Show not found"),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	// Analyze the episodes
+	analysis := s.analyzeEpisodes(targetShow, season, user, sortBy, 0)
+
+	// Convert to JSON
+	resultJSON, err := json.MarshalIndent(analysis, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error marshaling episode analysis: %v", err)),
 			},
 			IsError: true,
 		}, nil

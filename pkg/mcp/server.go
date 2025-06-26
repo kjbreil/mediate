@@ -77,11 +77,6 @@ func (s *MediateServer) registerTools() {
 					"enum": []string{"viewing_history", "similar_shows", "popular", "new_releases"},
 					"description": "Basis for recommendations",
 				},
-				"limit": map[string]interface{}{
-					"type": "integer",
-					"default": 10,
-					"description": "Number of recommendations",
-				},
 			},
 		},
 	}, s.handleGetRecommendations)
@@ -166,6 +161,68 @@ func (s *MediateServer) registerTools() {
 			},
 		},
 	}, s.handleGetSystemStatus)
+	
+	// Individual show analysis tool
+	s.server.AddTool(mcp.Tool{
+		Name:        "analyze_show",
+		Description: "Analyze viewing habits for a specific show with per-user breakdown",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"show_title": map[string]interface{}{
+					"type": "string",
+					"description": "Title of the show to analyze",
+				},
+				"tvdb_id": map[string]interface{}{
+					"type": "integer",
+					"description": "TVDB ID of the show (optional, alternative to title)",
+				},
+				"timeframe": map[string]interface{}{
+					"type": "string",
+					"enum": []string{"week", "month", "quarter", "year", "all"},
+					"description": "Time period to analyze",
+					"default": "all",
+				},
+				"user": map[string]interface{}{
+					"type": "string",
+					"description": "Specific Plex username to analyze (optional)",
+				},
+			},
+		},
+	}, s.handleAnalyzeShow)
+
+	// Episode analysis tool
+	s.server.AddTool(mcp.Tool{
+		Name:        "analyze_episodes",
+		Description: "Analyze viewing data for individual episodes with detailed metrics",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"show_title": map[string]interface{}{
+					"type": "string",
+					"description": "Title of the show to analyze episodes for",
+				},
+				"tvdb_id": map[string]interface{}{
+					"type": "integer",
+					"description": "TVDB ID of the show (optional, alternative to title)",
+				},
+				"season": map[string]interface{}{
+					"type": "integer",
+					"description": "Specific season to analyze (optional)",
+				},
+				"user": map[string]interface{}{
+					"type": "string",
+					"description": "Specific Plex username to analyze (optional)",
+				},
+				"sort_by": map[string]interface{}{
+					"type": "string",
+					"enum": []string{"view_count", "completion_rate", "air_date", "episode_number"},
+					"description": "How to sort the episode results",
+					"default": "episode_number",
+				},
+			},
+		},
+	}, s.handleAnalyzeEpisodes)
 }
 
 // registerResources registers all MCP resources
