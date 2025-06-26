@@ -223,6 +223,53 @@ func (s *MediateServer) registerTools() {
 			},
 		},
 	}, s.handleAnalyzeEpisodes)
+
+	// Deleted media analysis tool
+	s.server.AddTool(mcp.Tool{
+		Name:        "analyze_deleted_media",
+		Description: "Analyze viewing data for deleted/orphaned Plex media",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"action": map[string]interface{}{
+					"type": "string",
+					"enum": []string{"scan", "summary", "list", "details"},
+					"description": "Action to perform: scan for new deletions, get summary, list deleted media, or get details",
+					"default": "summary",
+				},
+				"rating_key": map[string]interface{}{
+					"type": "string",
+					"description": "Specific Plex rating key for details action",
+				},
+				"media_type": map[string]interface{}{
+					"type": "string",
+					"enum": []string{"movie", "show", "episode", "all"},
+					"description": "Filter by media type",
+					"default": "all",
+				},
+				"library_id": map[string]interface{}{
+					"type": "integer",
+					"description": "Filter by library section ID",
+				},
+			},
+		},
+	}, s.handleAnalyzeDeletedMedia)
+
+	// Scan for deleted media tool
+	s.server.AddTool(mcp.Tool{
+		Name:        "scan_deleted_media",
+		Description: "Scan Plex for orphaned viewing history records",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"force_rescan": map[string]interface{}{
+					"type": "boolean",
+					"description": "Force a complete rescan even if recently scanned",
+					"default": false,
+				},
+			},
+		},
+	}, s.handleScanDeletedMedia)
 }
 
 // registerResources registers all MCP resources

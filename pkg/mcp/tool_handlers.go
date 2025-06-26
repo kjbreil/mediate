@@ -436,3 +436,149 @@ func (s *MediateServer) handleAnalyzeEpisodes(ctx context.Context, request mcp.C
 		},
 	}, nil
 }
+
+// handleAnalyzeDeletedMedia handles the analyze_deleted_media tool
+func (s *MediateServer) handleAnalyzeDeletedMedia(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Info("Handling analyze_deleted_media request")
+
+	// Parse arguments
+	action := "summary"
+	var ratingKey string
+	mediaType := "all"
+	var libraryID int
+
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if a, exists := args["action"]; exists {
+			if aStr, ok := a.(string); ok {
+				action = aStr
+			}
+		}
+		if rk, exists := args["rating_key"]; exists {
+			if rkStr, ok := rk.(string); ok {
+				ratingKey = rkStr
+			}
+		}
+		if mt, exists := args["media_type"]; exists {
+			if mtStr, ok := mt.(string); ok {
+				mediaType = mtStr
+			}
+		}
+		if lid, exists := args["library_id"]; exists {
+			if lidFloat, ok := lid.(float64); ok {
+				libraryID = int(lidFloat)
+			}
+		}
+	}
+
+	var result interface{}
+	var err error
+
+	switch action {
+	case "summary":
+		result, err = s.mediate.DB.GetDeletedMediaSummary()
+	case "list":
+		var deletedMedia []*shows.DeletedMedia
+		deletedMedia, err = s.mediate.DB.GetDeletedMedia(0, 0) // Get all
+		if err == nil {
+			// Filter by media type and library if specified
+			var filtered []*shows.DeletedMedia
+			for _, media := range deletedMedia {
+				if mediaType != "all" && media.MediaType != mediaType {
+					continue
+				}
+				if libraryID > 0 && media.LibrarySectionID != libraryID {
+					continue
+				}
+				filtered = append(filtered, media)
+			}
+			result = filtered
+		}
+	case "details":
+		if ratingKey == "" {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.NewTextContent("Error: rating_key required for details action"),
+				},
+				IsError: true,
+			}, nil
+		}
+		result, err = s.mediate.DB.GetDeletedMediaByRatingKey(ratingKey)
+	default:
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error: Unknown action: %s", action)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error retrieving deleted media data: %v", err)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	// Convert to JSON
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error marshaling deleted media data: %v", err)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.NewTextContent(string(resultJSON)),
+		},
+	}, nil
+}
+
+// handleScanDeletedMedia handles the scan_deleted_media tool
+func (s *MediateServer) handleScanDeletedMedia(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Info("Handling scan_deleted_media request")
+
+	// Parse arguments
+	forceRescan := false
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if fr, exists := args["force_rescan"]; exists {
+			if frBool, ok := fr.(bool); ok {
+				forceRescan = frBool
+			}
+		}
+	}
+
+	// Create Plex history client - placeholder implementation
+	// Note: You would need to implement actual Plex configuration access
+	s.logger.Info("Starting orphaned record detection scan", "force_rescan", forceRescan)
+	
+	// For now, return a placeholder result since we need Plex config integration
+	result := map[string]interface{}{
+		"scan_completed_at":    time.Now(),
+		"status":              "scan_not_implemented",
+		"message":             "Plex configuration integration needed for actual scanning",
+		"force_rescan":        forceRescan,
+	}
+
+	// Convert to JSON
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.NewTextContent(fmt.Sprintf("Error marshaling scan results: %v", err)),
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.NewTextContent(string(resultJSON)),
+		},
+	}, nil
+}

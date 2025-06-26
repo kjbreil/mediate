@@ -962,3 +962,174 @@ func (s *MediateServer) getTimeframeDays(timeframe string) int {
 		return 0
 	}
 }
+
+// analyzeDeletedMediaTrends analyzes viewing trends for deleted media
+func (s *MediateServer) analyzeDeletedMediaTrends(timeframe string) (*DeletedMediaAnalysis, error) {
+	deletedMedia, err := s.mediate.DB.GetDeletedMedia(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	analysis := &DeletedMediaAnalysis{
+		Timeframe:   timeframe,
+		GeneratedAt: time.Now(),
+		TotalItems:  len(deletedMedia),
+		MediaStats:  make(map[string]*DeletedMediaTypeStats),
+	}
+
+	// Calculate cutoff time for timeframe filtering
+	cutoff := s.getTimeframeCutoff(timeframe)
+
+	var totalViews int
+	var totalWatchTime time.Duration
+	viewsByUser := make(map[string]int)
+	deletionsByMonth := make(map[string]int)
+
+	for _, media := range deletedMedia {
+		// Skip if outside timeframe (based on deletion date)
+		if !cutoff.IsZero() && media.DeletedAt.Before(cutoff) {
+			continue
+		}
+
+		analysis.ActiveItems++
+		totalViews += media.TotalViews
+		totalWatchTime += media.TotalWatchTime
+
+		// Track by media type
+		if _, exists := analysis.MediaStats[media.MediaType]; !exists {
+			analysis.MediaStats[media.MediaType] = &DeletedMediaTypeStats{
+				MediaType: media.MediaType,
+			}
+		}
+		stats := analysis.MediaStats[media.MediaType]
+		stats.Count++
+		stats.TotalViews += media.TotalViews
+		stats.TotalWatchTime += media.TotalWatchTime
+
+		// Track views by user from sessions
+		for _, session := range media.ViewingSessions {
+			viewsByUser[session.PlexUsername]++
+		}
+
+		// Track deletions by month
+		monthKey := media.DeletedAt.Format("2006-01")
+		deletionsByMonth[monthKey]++
+	}
+
+	analysis.TotalViews = totalViews
+	analysis.TotalWatchTime = totalWatchTime
+	analysis.ViewsByUser = viewsByUser
+	analysis.DeletionsByMonth = deletionsByMonth
+
+	// Calculate most watched deleted content
+	if len(deletedMedia) > 0 {
+		// Sort by view count
+		mostWatched := deletedMedia[0]
+		for _, media := range deletedMedia[1:] {
+			if media.TotalViews > mostWatched.TotalViews {
+				mostWatched = media
+			}
+		}
+		analysis.MostWatchedDeleted = &DeletedMediaHighlight{
+			Title:          mostWatched.Title,
+			MediaType:      mostWatched.MediaType,
+			TotalViews:     mostWatched.TotalViews,
+			TotalWatchTime: mostWatched.TotalWatchTime,
+			DeletedAt:      mostWatched.DeletedAt,
+		}
+	}
+
+	return analysis, nil
+}
+
+// DeletedMediaAnalysis represents comprehensive analysis of deleted media
+type DeletedMediaAnalysis struct {
+	Timeframe           string                            `json:"timeframe"`
+	GeneratedAt         time.Time                         `json:"generated_at"`
+	TotalItems          int                               `json:"total_items"`
+	ActiveItems         int                               `json:"active_items"`
+	TotalViews          int                               `json:"total_views"`
+	TotalWatchTime      time.Duration                     `json:"total_watch_time"`
+	ViewsByUser         map[string]int                    `json:"views_by_user"`
+	DeletionsByMonth    map[string]int                    `json:"deletions_by_month"`
+	MediaStats          map[string]*DeletedMediaTypeStats `json:"media_stats"`
+	MostWatchedDeleted  *DeletedMediaHighlight            `json:"most_watched_deleted"`
+}
+
+// DeletedMediaTypeStats provides statistics for a specific media type
+type DeletedMediaTypeStats struct {
+	MediaType      string        `json:"media_type"`
+	Count          int           `json:"count"`
+	TotalViews     int           `json:"total_views"`
+	TotalWatchTime time.Duration `json:"total_watch_time"`
+	AverageViews   float64       `json:"average_views"`
+}
+
+// DeletedMediaHighlight highlights notable deleted media
+type DeletedMediaHighlight struct {
+	Title          string        `json:"title"`
+	MediaType      string        `json:"media_type"`
+	TotalViews     int           `json:"total_views"`
+	TotalWatchTime time.Duration `json:"total_watch_time"`
+	DeletedAt      time.Time     `json:"deleted_at"`
+}
+
+// CalculateDeletedMediaImpact analyzes the viewing impact of deleted media
+func (s *MediateServer) CalculateDeletedMediaImpact() (*DeletedMediaImpact, error) {
+	deletedSummary, err := s.mediate.DB.GetDeletedMediaSummary()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get current active media stats for comparison
+	shows := s.mediate.GetShows()
+	if shows == nil {
+		return nil, fmt.Errorf("unable to get current shows data")
+	}
+
+	var activeViews int
+	var activeWatchTime time.Duration
+	for _, show := range *shows {
+		for _, episode := range show.Episodes {
+			if episode.Watched {
+				activeViews++
+				if episode.LastViewedAt != nil {
+					// Estimate watch time (would be better with actual data)
+					activeWatchTime += episode.Duration
+				}
+			}
+		}
+	}
+
+	impact := &DeletedMediaImpact{
+		DeletedViews:      deletedSummary.TotalViews,
+		DeletedWatchTime:  deletedSummary.TotalWatchTime,
+		ActiveViews:       activeViews,
+		ActiveWatchTime:   activeWatchTime,
+		GeneratedAt:       time.Now(),
+	}
+
+	// Calculate impact percentages
+	totalViews := activeViews + deletedSummary.TotalViews
+	if totalViews > 0 {
+		impact.DeletedViewsPercent = float64(deletedSummary.TotalViews) / float64(totalViews) * 100
+	}
+
+	totalWatchTime := activeWatchTime + deletedSummary.TotalWatchTime
+	if totalWatchTime > 0 {
+		impact.DeletedWatchTimePercent = float64(deletedSummary.TotalWatchTime) / float64(totalWatchTime) * 100
+	}
+
+	return impact, nil
+}
+
+// DeletedMediaImpact represents the impact analysis of deleted media
+type DeletedMediaImpact struct {
+	DeletedViews            int           `json:"deleted_views"`
+	DeletedWatchTime        time.Duration `json:"deleted_watch_time"`
+	DeletedViewsPercent     float64       `json:"deleted_views_percent"`
+	DeletedWatchTimePercent float64       `json:"deleted_watch_time_percent"`
+	ActiveViews             int           `json:"active_views"`
+	ActiveWatchTime         time.Duration `json:"active_watch_time"`
+	GeneratedAt             time.Time     `json:"generated_at"`
+}
