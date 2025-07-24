@@ -63,7 +63,26 @@ func (m *Mediate) SetMonitored() {
 					sea.Monitored = false
 				}
 
-				_, err = m.sonarr.UpdateSeries(ser, false)
+				updateInput := &sonarr.AddSeriesInput{
+					ID:                ser.ID,
+					Title:             ser.Title,
+					TitleSlug:         ser.TitleSlug,
+					TvdbID:            ser.TvdbID,
+					ImdbID:            ser.ImdbID,
+					TvMazeID:          ser.TvMazeID,
+					TvRageID:          ser.TvRageID,
+					Path:              ser.Path,
+					QualityProfileID:  ser.QualityProfileID,
+					LanguageProfileID: ser.LanguageProfileID,
+					SeriesType:        ser.SeriesType,
+					Monitored:         ser.Monitored,
+					SeasonFolder:      ser.SeasonFolder,
+					UseSceneNumbering: ser.UseSceneNumbering,
+					Tags:              ser.Tags,
+					Seasons:           ser.Seasons,
+					Images:            ser.Images,
+				}
+				_, err = m.sonarr.UpdateSeries(updateInput, false)
 				if err != nil {
 					return
 				}
@@ -219,7 +238,26 @@ func (m *Mediate) UnMonitorAll(show *shows.Show) error {
 		sea.Monitored = false
 	}
 
-	_, err = m.sonarr.UpdateSeries(ser, false)
+	updateInput := &sonarr.AddSeriesInput{
+		ID:                ser.ID,
+		Title:             ser.Title,
+		TitleSlug:         ser.TitleSlug,
+		TvdbID:            ser.TvdbID,
+		ImdbID:            ser.ImdbID,
+		TvMazeID:          ser.TvMazeID,
+		TvRageID:          ser.TvRageID,
+		Path:              ser.Path,
+		QualityProfileID:  ser.QualityProfileID,
+		LanguageProfileID: ser.LanguageProfileID,
+		SeriesType:        ser.SeriesType,
+		Monitored:         ser.Monitored,
+		SeasonFolder:      ser.SeasonFolder,
+		UseSceneNumbering: ser.UseSceneNumbering,
+		Tags:              ser.Tags,
+		Seasons:           ser.Seasons,
+		Images:            ser.Images,
+	}
+	_, err = m.sonarr.UpdateSeries(updateInput, false)
 	if err != nil {
 		return err
 	}
@@ -243,7 +281,26 @@ func (m *Mediate) MonitorAll(show *shows.Show) error {
 		sea.Monitored = sea.SeasonNumber != 0
 	}
 
-	_, err = m.sonarr.UpdateSeries(ser, false)
+	updateInput := &sonarr.AddSeriesInput{
+		ID:                ser.ID,
+		Title:             ser.Title,
+		TitleSlug:         ser.TitleSlug,
+		TvdbID:            ser.TvdbID,
+		ImdbID:            ser.ImdbID,
+		TvMazeID:          ser.TvMazeID,
+		TvRageID:          ser.TvRageID,
+		Path:              ser.Path,
+		QualityProfileID:  ser.QualityProfileID,
+		LanguageProfileID: ser.LanguageProfileID,
+		SeriesType:        ser.SeriesType,
+		Monitored:         ser.Monitored,
+		SeasonFolder:      ser.SeasonFolder,
+		UseSceneNumbering: ser.UseSceneNumbering,
+		Tags:              ser.Tags,
+		Seasons:           ser.Seasons,
+		Images:            ser.Images,
+	}
+	_, err = m.sonarr.UpdateSeries(updateInput, false)
 	if err != nil {
 		return err
 	}

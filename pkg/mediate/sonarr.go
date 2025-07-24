@@ -73,7 +73,7 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 	defer close(buf)
 	wg := &sync.WaitGroup{}
 
-	episodes, err := m.sonarr.GetSeriesEpisodes(s.SonarrId)
+	episodes, err := m.sonarr.GetSeriesEpisodes(&sonarr.GetEpisode{SeriesID: s.SonarrId})
 	if err != nil {
 		return err
 	}
