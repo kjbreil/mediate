@@ -2,10 +2,11 @@ package mediate
 
 import (
 	"github.com/kjbreil/mediate/pkg/movies"
+	"golift.io/starr/radarr"
 )
 
 func (m *Mediate) loadMovies() error {
-	allMovies, err := m.radarr.GetMovie(0)
+	allMovies, err := m.radarr.GetMovie(&radarr.GetMovie{TMDBID: 0})
 	if err != nil {
 		return err
 	}
