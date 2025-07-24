@@ -23,3 +23,4 @@ go.work
 .idea/**
 plex-library-cache.json
 mediate.sqlite
+bin/**
