@@ -24,3 +24,5 @@ go.work
 plex-library-cache.json
 mediate.sqlite
 bin/**
+/mediate
+/config.yaml
