@@ -2,6 +2,9 @@ package mediate
 
 import (
 	"context"
+	"log/slog"
+	"time"
+
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/go-plex/plex"
 	"github.com/kjbreil/mediate/pkg/config"
@@ -11,8 +14,6 @@ import (
 	"golift.io/starr"
 	"golift.io/starr/radarr"
 	"golift.io/starr/sonarr"
-	"log/slog"
-	"time"
 )
 
 type Mediate struct {
@@ -74,7 +75,7 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 }
 
 // NewForMCP creates a new Mediate instance with fast initialization for MCP mode
-// Heavy data loading is deferred to background goroutines
+// Heavy data loading is deferred to background goroutines.
 func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 	m, err := New(c, options...)
 	if err != nil {
@@ -84,7 +85,7 @@ func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 	// Start heavy data loading in background to avoid blocking MCP initialization
 	go func() {
 		m.logger.Info("Starting background data loading for MCP mode")
-		
+
 		// Load shows data
 		start := time.Now()
 		if err := m.loadShows(); err != nil {
@@ -97,7 +98,7 @@ func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		start = time.Now()
 		m.plex.PopulateLibraries()()
 		m.logger.Info("Background plex library refresh completed", "duration", time.Since(start))
-		
+
 		// Load Plex data
 		if err := m.loadPlex(); err != nil {
 			m.logger.Error("Failed to load plex data", "error", err)
@@ -114,7 +115,7 @@ func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 	return m, nil
 }
 
-// LoadDataSync loads all data synchronously (for traditional job mode)
+// LoadDataSync loads all data synchronously (for traditional job mode).
 func (m *Mediate) LoadDataSync() error {
 	err := m.loadShows()
 	if err != nil {
@@ -124,7 +125,7 @@ func (m *Mediate) LoadDataSync() error {
 	start := time.Now()
 	m.plex.PopulateLibraries()()
 	m.logger.Info("plex library refreshed", "duration", time.Since(start))
-	
+
 	err = m.loadPlex()
 	if err != nil {
 		return err
@@ -154,7 +155,6 @@ func (m *Mediate) loadPlex() error {
 		// 		return err
 		// 	}
 		// }
-
 	}
 	return nil
 }
@@ -172,16 +172,16 @@ func (m *Mediate) Config() config.Config {
 	return m.config
 }
 
-// TriggerEpisodeSearch triggers a search for specific episodes in Sonarr
+// TriggerEpisodeSearch triggers a search for specific episodes in Sonarr.
 func (m *Mediate) TriggerEpisodeSearch(episodeIDs []int64) error {
 	if len(episodeIDs) == 0 {
 		return nil
 	}
-	
+
 	_, err := m.sonarr.SendCommand(&sonarr.CommandRequest{
 		Name:       "EpisodeSearch",
 		EpisodeIDs: episodeIDs,
 	})
-	
+
 	return err
 }

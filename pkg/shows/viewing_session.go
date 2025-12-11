@@ -5,42 +5,42 @@ import (
 	"time"
 )
 
-// ViewingSession represents a single viewing session for an episode by a specific user
+// ViewingSession represents a single viewing session for an episode by a specific user.
 type ViewingSession struct {
-	ID              uint      `gorm:"primaryKey"`
-	EpisodeTvdbID   int       `gorm:"index"`
-	Episode         *Episode  `gorm:"foreignKey:EpisodeTvdbID;references:TvdbID"`
-	
+	ID            uint     `gorm:"primaryKey"`
+	EpisodeTvdbID int      `gorm:"index"`
+	Episode       *Episode `gorm:"foreignKey:EpisodeTvdbID;references:TvdbID"`
+
 	// User information
-	PlexUserID      int       `gorm:"index"` // Plex user ID
-	PlexUsername    string    `gorm:"index"` // Plex username for easier querying
-	
+	PlexUserID   int    `gorm:"index"` // Plex user ID
+	PlexUsername string `gorm:"index"` // Plex username for easier querying
+
 	// Session details
 	StartedAt       time.Time
 	EndedAt         *time.Time
 	Duration        time.Duration // How long they actually watched
 	ProgressPercent float64       // How far through the episode (0-100)
 	Completed       bool          // Did they finish the episode
-	
+
 	// Context
-	DeviceType      string        // TV, Mobile, Web, etc.
-	DeviceName      string        // Specific device name
-	Location        string        // Home, Remote, etc.
-	
+	DeviceType string // TV, Mobile, Web, etc.
+	DeviceName string // Specific device name
+	Location   string // Home, Remote, etc.
+
 	// Behavior
-	Paused          bool          // Did they pause during viewing
-	PauseCount      int           // How many times they paused
-	Skipped         bool          // Did they skip/fast forward
-	SkipCount       int           // How many times they skipped
-	
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	Paused     bool // Did they pause during viewing
+	PauseCount int  // How many times they paused
+	Skipped    bool // Did they skip/fast forward
+	SkipCount  int  // How many times they skipped
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-// ViewingSessions is a slice of ViewingSession
+// ViewingSessions is a slice of ViewingSession.
 type ViewingSessions []*ViewingSession
 
-// ByUser filters viewing sessions by username
+// ByUser filters viewing sessions by username.
 func (vs ViewingSessions) ByUser(username string) ViewingSessions {
 	var result ViewingSessions
 	for _, session := range vs {
@@ -51,7 +51,7 @@ func (vs ViewingSessions) ByUser(username string) ViewingSessions {
 	return result
 }
 
-// Completed filters to only completed viewing sessions
+// Completed filters to only completed viewing sessions.
 func (vs ViewingSessions) Completed() ViewingSessions {
 	var result ViewingSessions
 	for _, session := range vs {
@@ -62,7 +62,7 @@ func (vs ViewingSessions) Completed() ViewingSessions {
 	return result
 }
 
-// InTimeframe filters sessions within a time period
+// InTimeframe filters sessions within a time period.
 func (vs ViewingSessions) InTimeframe(since time.Time) ViewingSessions {
 	var result ViewingSessions
 	for _, session := range vs {
@@ -73,7 +73,7 @@ func (vs ViewingSessions) InTimeframe(since time.Time) ViewingSessions {
 	return result
 }
 
-// TotalWatchTime calculates total watch time across all sessions
+// TotalWatchTime calculates total watch time across all sessions.
 func (vs ViewingSessions) TotalWatchTime() time.Duration {
 	var total time.Duration
 	for _, session := range vs {
@@ -82,26 +82,26 @@ func (vs ViewingSessions) TotalWatchTime() time.Duration {
 	return total
 }
 
-// UserStats calculates viewing statistics per user
+// UserStats calculates viewing statistics per user.
 type UserStats struct {
-	Username        string
-	TotalSessions   int
-	TotalWatchTime  time.Duration
+	Username          string
+	TotalSessions     int
+	TotalWatchTime    time.Duration
 	CompletedEpisodes int
 	AverageCompletion float64
-	FavoriteDevice  string
-	ViewingPeak     string // Most active viewing hour
+	FavoriteDevice    string
+	ViewingPeak       string // Most active viewing hour
 }
 
-// GetUserStats calculates statistics for each user
+// GetUserStats calculates statistics for each user.
 func (vs ViewingSessions) GetUserStats() map[string]*UserStats {
 	userMap := make(map[string]*UserStats)
 	deviceCounts := make(map[string]map[string]int) // user -> device -> count
 	hourCounts := make(map[string]map[int]int)      // user -> hour -> count
-	
+
 	for _, session := range vs {
 		username := session.PlexUsername
-		
+
 		// Initialize user if not exists
 		if _, exists := userMap[username]; !exists {
 			userMap[username] = &UserStats{
@@ -110,29 +110,29 @@ func (vs ViewingSessions) GetUserStats() map[string]*UserStats {
 			deviceCounts[username] = make(map[string]int)
 			hourCounts[username] = make(map[int]int)
 		}
-		
+
 		stats := userMap[username]
 		stats.TotalSessions++
 		stats.TotalWatchTime += session.Duration
-		
+
 		if session.Completed {
 			stats.CompletedEpisodes++
 		}
-		
+
 		// Track device usage
 		deviceCounts[username][session.DeviceType]++
-		
+
 		// Track viewing hours
 		hour := session.StartedAt.Hour()
 		hourCounts[username][hour]++
 	}
-	
+
 	// Calculate averages and favorites
 	for username, stats := range userMap {
 		if stats.TotalSessions > 0 {
 			stats.AverageCompletion = float64(stats.CompletedEpisodes) / float64(stats.TotalSessions) * 100
 		}
-		
+
 		// Find favorite device
 		maxCount := 0
 		for device, count := range deviceCounts[username] {
@@ -141,7 +141,7 @@ func (vs ViewingSessions) GetUserStats() map[string]*UserStats {
 				stats.FavoriteDevice = device
 			}
 		}
-		
+
 		// Find peak viewing hour
 		maxHourCount := 0
 		peakHour := 0
@@ -151,9 +151,9 @@ func (vs ViewingSessions) GetUserStats() map[string]*UserStats {
 				peakHour = hour
 			}
 		}
-			stats.ViewingPeak = formatHour(peakHour)
+		stats.ViewingPeak = formatHour(peakHour)
 	}
-	
+
 	return userMap
 }
 

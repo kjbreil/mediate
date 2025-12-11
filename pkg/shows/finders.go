@@ -34,7 +34,6 @@ func init() {
 				!episode.AddedWithin(WindowDuration)
 		},
 		NotWatchedCanDelete: func(show *Show, episode *Episode) bool {
-
 			return episode.HasFile &&
 				!episode.Watched &&
 				show.Rating <= MaxShowRating &&
@@ -42,7 +41,9 @@ func init() {
 				!episode.AddedWithin(WindowDuration)
 		},
 		DownloadedAfterWatched: func(show *Show, episode *Episode) bool {
-			return episode.HasFile && episode.Watched && episode.LastViewedAt != nil && episode.LastViewedAt.Before(episode.DownloadedAt) && show.Rating <= MaxShowRating
+			return episode.HasFile && episode.Watched && episode.LastViewedAt != nil &&
+				episode.LastViewedAt.Before(episode.DownloadedAt) &&
+				show.Rating <= MaxShowRating
 		},
 		MissingFromPlex: func(show *Show, episode *Episode) bool {
 			return episode.PlexRatingKey == "" && episode.HasFile
@@ -78,7 +79,6 @@ func init() {
 // Show: Jersey Shore: Family Vacation, Title: Happy Birthday Snooki!, Season: 7, Episode: 16 LastWatched: 2024-05-20T21:17:35-07:00
 
 func (s *Shows) Find(fn FindFunc) (rtn Episodes) {
-
 	for _, show := range *s {
 		if show.Ignore {
 			continue
@@ -93,5 +93,5 @@ func (s *Shows) Find(fn FindFunc) (rtn Episodes) {
 		}
 	}
 
-	return
+	return rtn
 }

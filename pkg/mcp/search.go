@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	
+
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
-// searchMedia performs media search across multiple sources
+// searchMedia performs media search across multiple sources.
 func (s *MediateServer) searchMedia(query string, mediaType string, source string) *SearchResults {
 	startTime := time.Now()
 	results := &SearchResults{
@@ -57,18 +57,18 @@ func (s *MediateServer) searchMedia(query string, mediaType string, source strin
 	results.TotalCount = len(results.Results)
 	results.SearchTime = time.Since(startTime)
 
-	s.logger.Info("Search completed", 
-		"query", query, 
-		"results", results.TotalCount, 
+	s.logger.Info("Search completed",
+		"query", query,
+		"results", results.TotalCount,
 		"duration", results.SearchTime)
 
 	return results
 }
 
-// searchPlex searches the Plex library
+// searchPlex searches the Plex library.
 func (s *MediateServer) searchPlex(query string, mediaType string) []*SearchResult {
 	results := make([]*SearchResult, 0)
-	
+
 	shows := s.mediate.GetShows()
 	if shows == nil {
 		return results
@@ -78,18 +78,18 @@ func (s *MediateServer) searchPlex(query string, mediaType string) []*SearchResu
 
 	for _, show := range *shows {
 		titleLower := strings.ToLower(show.Title)
-		
+
 		// Simple string matching - in production, you'd use more sophisticated search
 		if strings.Contains(titleLower, queryLower) {
 			if mediaType == "shows" || mediaType == "both" {
 				result := &SearchResult{
-					Title:       show.Title,
-					Type:        "show",
-					Source:      "plex",
-					TvdbID:      show.TvdbID,
-					Available:   true,
-					Monitored:   s.isShowMonitored(show),
-					Status:      s.getShowStatus(show),
+					Title:     show.Title,
+					Type:      "show",
+					Source:    "plex",
+					TvdbID:    show.TvdbID,
+					Available: true,
+					Monitored: s.isShowMonitored(show),
+					Status:    s.getShowStatus(show),
 				}
 				results = append(results, result)
 			}
@@ -99,7 +99,7 @@ func (s *MediateServer) searchPlex(query string, mediaType string) []*SearchResu
 	return results
 }
 
-// searchSonarr searches Sonarr for TV shows
+// searchSonarr searches Sonarr for TV shows.
 func (s *MediateServer) searchSonarr(query string, mediaType string) []*SearchResult {
 	results := make([]*SearchResult, 0)
 
@@ -113,7 +113,7 @@ func (s *MediateServer) searchSonarr(query string, mediaType string) []*SearchRe
 		{
 			Title:       "Breaking Bad",
 			Type:        "show",
-			Source:      "sonarr", 
+			Source:      "sonarr",
 			TvdbID:      81189,
 			Year:        2008,
 			Genre:       []string{"Drama", "Crime"},
@@ -146,7 +146,7 @@ func (s *MediateServer) searchSonarr(query string, mediaType string) []*SearchRe
 	return results
 }
 
-// searchRadarr searches Radarr for movies
+// searchRadarr searches Radarr for movies.
 func (s *MediateServer) searchRadarr(query string, mediaType string) []*SearchResult {
 	results := make([]*SearchResult, 0)
 
@@ -191,7 +191,7 @@ func (s *MediateServer) searchRadarr(query string, mediaType string) []*SearchRe
 	return results
 }
 
-// addToDownloads adds items to the download queue
+// addToDownloads adds items to the download queue.
 func (s *MediateServer) addToDownloads(items []*DownloadItem, qualityProfile string) *DownloadResponse {
 	response := &DownloadResponse{
 		Success:   make([]*DownloadItem, 0),
@@ -201,19 +201,19 @@ func (s *MediateServer) addToDownloads(items []*DownloadItem, qualityProfile str
 	}
 
 	for _, item := range items {
-		s.logger.Info("Adding item to downloads", 
-			"title", item.Title, 
+		s.logger.Info("Adding item to downloads",
+			"title", item.Title,
 			"type", item.Type,
 			"monitor", item.Monitor)
 
 		// In a real implementation, you'd call Sonarr/Radarr APIs here
 		success := s.addItemToDownloadService(item, qualityProfile)
-		
+
 		if success {
 			response.Success = append(response.Success, item)
 		} else {
 			response.Failed = append(response.Failed, item)
-			response.Errors = append(response.Errors, 
+			response.Errors = append(response.Errors,
 				fmt.Sprintf("Failed to add %s to downloads", item.Title))
 		}
 	}
@@ -232,7 +232,7 @@ func (s *MediateServer) addToDownloads(items []*DownloadItem, qualityProfile str
 	return response
 }
 
-// addItemToDownloadService adds a single item to the appropriate download service
+// addItemToDownloadService adds a single item to the appropriate download service.
 func (s *MediateServer) addItemToDownloadService(item *DownloadItem, qualityProfile string) bool {
 	switch item.Type {
 	case "show":
@@ -245,26 +245,26 @@ func (s *MediateServer) addItemToDownloadService(item *DownloadItem, qualityProf
 	}
 }
 
-// addToSonarr adds a show to Sonarr
+// addToSonarr adds a show to Sonarr.
 func (s *MediateServer) addToSonarr(item *DownloadItem, qualityProfile string) bool {
 	s.logger.Info("Adding show to Sonarr", "title", item.Title, "tvdb_id", item.TvdbID, "monitor", item.Monitor)
-	
+
 	// If we have a TVDB ID, try to find and add the show
 	if item.TvdbID > 0 {
 		return s.addShowByTvdbID(item.TvdbID, item.Monitor, qualityProfile)
 	}
-	
+
 	// Otherwise, search by title (fallback)
 	return s.addShowByTitle(item.Title, item.Monitor, qualityProfile)
 }
 
-// addShowByTvdbID adds a show to Sonarr using TVDB ID
+// addShowByTvdbID adds a show to Sonarr using TVDB ID.
 func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, qualityProfile string) bool {
 	// Check if show already exists in our database
 	existingShow := s.mediate.DB.GetShow(tvdbID)
 	if existingShow != nil {
 		s.logger.Info("Show already exists in database", "tvdb_id", tvdbID, "title", existingShow.Title)
-		
+
 		// If it's not monitored but we want to monitor it, trigger a search
 		if monitor && !s.isShowMonitored(existingShow) {
 			s.logger.Info("Show exists but not monitored, triggering search", "title", existingShow.Title)
@@ -272,34 +272,34 @@ func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, qualityProfile
 		}
 		return true
 	}
-	
+
 	// Search for the show in Sonarr's lookup
 	s.logger.Info("Searching for show in Sonarr lookup", "tvdb_id", tvdbID)
-	
+
 	// This would require calling Sonarr's lookup API to find the show
 	// For now, we'll log the action and return success
 	// In a real implementation, you'd call something like:
 	// lookupResults, err := s.mediate.sonarr.Lookup(fmt.Sprintf("tvdb:%d", tvdbID))
 	// then add the show with the appropriate quality profile
-	
+
 	s.logger.Info("Would add show to Sonarr via TVDB lookup", "tvdb_id", tvdbID)
 	return true
 }
 
-// addShowByTitle adds a show to Sonarr using title search
+// addShowByTitle adds a show to Sonarr using title search.
 func (s *MediateServer) addShowByTitle(title string, monitor bool, qualityProfile string) bool {
 	s.logger.Info("Searching for show by title", "title", title)
-	
+
 	// This would search Sonarr's lookup API by title
 	// For now, we'll log the action
 	s.logger.Info("Would add show to Sonarr via title search", "title", title)
 	return true
 }
 
-// triggerShowSearch triggers a search for a show's monitored episodes
+// triggerShowSearch triggers a search for a show's monitored episodes.
 func (s *MediateServer) triggerShowSearch(show *shows.Show) {
 	s.logger.Info("Triggering search for show", "title", show.Title, "sonarr_id", show.SonarrId)
-	
+
 	// Get monitored episodes for this show
 	monitoredEpisodes := make([]int64, 0)
 	for _, episode := range show.Episodes {
@@ -307,13 +307,13 @@ func (s *MediateServer) triggerShowSearch(show *shows.Show) {
 			monitoredEpisodes = append(monitoredEpisodes, episode.SonarrId)
 		}
 	}
-	
+
 	if len(monitoredEpisodes) > 0 {
 		s.logger.Info("Triggering episode search", "title", show.Title, "episode_count", len(monitoredEpisodes))
-		
+
 		// Send the search command to Sonarr (similar to DownloadEpisodes)
 		err := s.mediate.TriggerEpisodeSearch(monitoredEpisodes)
-		
+
 		if err != nil {
 			s.logger.Error("Failed to trigger episode search", "error", err)
 		} else {
@@ -324,20 +324,20 @@ func (s *MediateServer) triggerShowSearch(show *shows.Show) {
 	}
 }
 
-// addToRadarr adds a movie to Radarr
+// addToRadarr adds a movie to Radarr.
 func (s *MediateServer) addToRadarr(item *DownloadItem, qualityProfile string) bool {
 	s.logger.Info("Adding movie to Radarr", "title", item.Title)
-	
+
 	// In a real implementation, you'd:
 	// 1. Search for the movie in Radarr's database
 	// 2. Add the movie with the specified quality profile
 	// 3. Set monitoring status based on item.Monitor
-	
+
 	// For now, we'll simulate success
 	return true
 }
 
-// getSystemStatus returns the current system status
+// getSystemStatus returns the current system status.
 func (s *MediateServer) getSystemStatus(detailed bool) *SystemStatus {
 	status := &SystemStatus{
 		Services:    make(map[string]ServiceStatus),
@@ -350,7 +350,7 @@ func (s *MediateServer) getSystemStatus(detailed bool) *SystemStatus {
 	if shows != nil {
 		totalEpisodes := 0
 		watchedEpisodes := 0
-		
+
 		for _, show := range *shows {
 			totalEpisodes += len(show.Episodes)
 			for _, episode := range show.Episodes {
@@ -397,7 +397,7 @@ func (s *MediateServer) getSystemStatus(detailed bool) *SystemStatus {
 	}
 
 	status.Services["radarr"] = ServiceStatus{
-		Name:      "Radarr", 
+		Name:      "Radarr",
 		URL:       s.mediate.Config().Radarr.URL,
 		Status:    "connected",
 		LastCheck: time.Now(),
@@ -413,7 +413,7 @@ func (s *MediateServer) getSystemStatus(detailed bool) *SystemStatus {
 				Interval: "1h",
 			},
 			{
-				Name:     "download", 
+				Name:     "download",
 				Status:   "running",
 				LastRun:  &time.Time{},
 				Interval: "30m",

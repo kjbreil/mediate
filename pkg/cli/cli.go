@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Config represents the command-line configuration
+// Config represents the command-line configuration.
 type Config struct {
 	// Job-related flags
 	Jobs            []string
@@ -22,10 +22,10 @@ type Config struct {
 	Port      int    // Port for HTTP transport
 
 	// Analysis flags
-	Analyze      bool   // Run analysis mode
-	AnalyzeShow  string // Specific show to analyze
-	AnalyzeType  string // Type of analysis: "show", "episodes", "deleted", "habits"
-	ScanDeleted  bool   // Scan for deleted media
+	Analyze     bool   // Run analysis mode
+	AnalyzeShow string // Specific show to analyze
+	AnalyzeType string // Type of analysis: "show", "episodes", "deleted", "habits"
+	ScanDeleted bool   // Scan for deleted media
 
 	// General flags
 	ConfigFile   string
@@ -34,7 +34,7 @@ type Config struct {
 	Help         bool
 }
 
-// ParseFlags parses command-line flags and returns a Config
+// ParseFlags parses command-line flags and returns a Config.
 func ParseFlags() *Config {
 	cfg := &Config{
 		Intervals: make(map[string]time.Duration),
@@ -44,25 +44,30 @@ func ParseFlags() *Config {
 	flag.StringVar(&cfg.ConfigFile, "config", "", "Path to configuration file")
 	flag.BoolVar(&cfg.CreateConfig, "create-config", false, "Create a default configuration file if it doesn't exist")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
-	
+
 	// MCP server flags
-	flag.StringVar(&cfg.Mode, "mode", "jobs", "Operating mode: 'jobs' for traditional job mode, 'mcp' for MCP server mode")
+	flag.StringVar(
+		&cfg.Mode,
+		"mode",
+		"jobs",
+		"Operating mode: 'jobs' for traditional job mode, 'mcp' for MCP server mode",
+	)
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "MCP transport: 'stdio' for Claude Desktop, 'http' for web")
 	flag.IntVar(&cfg.Port, "port", 8080, "Port for HTTP transport (when using --transport=http)")
-	
+
 	// Job selection and intervals
 	jobsFlag := flag.String("jobs", "", "Comma-separated list of jobs to run (all, monitor, download, delete, refresh)")
 	defaultIntervalFlag := flag.String("interval", "30m", "Default interval for all jobs")
-	
+
 	// Individual job intervals
 	monitorIntervalFlag := flag.String("monitor-interval", "", "Interval for monitor job")
 	downloadIntervalFlag := flag.String("download-interval", "", "Interval for download job")
 	deleteIntervalFlag := flag.String("delete-interval", "", "Interval for delete job")
 	refreshIntervalFlag := flag.String("refresh-interval", "", "Interval for refresh job")
-	
+
 	// Watcher flags
 	flag.BoolVar(&cfg.WatchPlex, "watch-plex", false, "Enable Plex watching to trigger actions when media is played")
-	
+
 	// Analysis flags
 	flag.BoolVar(&cfg.Analyze, "analyze", false, "Run analysis mode")
 	flag.StringVar(&cfg.AnalyzeShow, "show", "", "Specific show to analyze")
@@ -97,12 +102,13 @@ func ParseFlags() *Config {
 	parseJobInterval(cfg, "refresh", *refreshIntervalFlag)
 
 	// Parse jobs
-	if *jobsFlag == "" {
+	switch *jobsFlag {
+	case "":
 		// Default to all jobs if none specified
 		cfg.Jobs = []string{"monitor", "download", "delete", "refresh"}
-	} else if *jobsFlag == "all" {
+	case "all":
 		cfg.Jobs = []string{"monitor", "download", "delete", "refresh"}
-	} else {
+	default:
 		cfg.Jobs = strings.Split(*jobsFlag, ",")
 		// Trim whitespace
 		for i, job := range cfg.Jobs {
@@ -113,7 +119,7 @@ func ParseFlags() *Config {
 	return cfg
 }
 
-// parseJobInterval parses a job-specific interval
+// parseJobInterval parses a job-specific interval.
 func parseJobInterval(cfg *Config, jobName, intervalStr string) {
 	if intervalStr == "" {
 		return
@@ -128,7 +134,7 @@ func parseJobInterval(cfg *Config, jobName, intervalStr string) {
 	cfg.Intervals[jobName] = interval
 }
 
-// parseDuration parses a duration string with support for days
+// parseDuration parses a duration string with support for days.
 func parseDuration(s string) (time.Duration, error) {
 	// Check for days format (e.g., "3d")
 	if strings.HasSuffix(s, "d") {
@@ -144,7 +150,7 @@ func parseDuration(s string) (time.Duration, error) {
 	return time.ParseDuration(s)
 }
 
-// GetJobInterval returns the interval for a specific job
+// GetJobInterval returns the interval for a specific job.
 func (c *Config) GetJobInterval(jobName string) time.Duration {
 	if interval, ok := c.Intervals[jobName]; ok {
 		return interval
@@ -152,7 +158,7 @@ func (c *Config) GetJobInterval(jobName string) time.Duration {
 	return c.DefaultInterval
 }
 
-// printHelp prints help information
+// printHelp prints help information.
 func printHelp() {
 	fmt.Println("Mediate - A tool to manage Plex, Sonarr, and Radarr")
 	fmt.Println("\nUsage:")

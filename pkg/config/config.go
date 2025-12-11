@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
 	Plex     Plex     `yaml:"plex"`
 	Sonarr   Sonarr   `yaml:"sonarr"`
@@ -16,7 +16,7 @@ type Config struct {
 	Database Database `yaml:"database"`
 }
 
-// Plex configuration
+// Plex configuration.
 type Plex struct {
 	URL     string   `yaml:"url"`
 	Token   string   `yaml:"token"`
@@ -35,24 +35,24 @@ func (p *Plex) Ignore(toIgnore string) bool {
 	return false
 }
 
-// Sonarr configuration
+// Sonarr configuration.
 type Sonarr struct {
 	URL    string `yaml:"url"`
 	ApiKey string `yaml:"api_key"`
 }
 
-// Radarr configuration
+// Radarr configuration.
 type Radarr struct {
 	URL    string `yaml:"url"`
 	ApiKey string `yaml:"api_key"`
 }
 
-// Database configuration
+// Database configuration.
 type Database struct {
 	Path string `yaml:"path"`
 }
 
-// LoadConfig loads the configuration from a file
+// LoadConfig loads the configuration from a file.
 func LoadConfig(path string) (*Config, error) {
 	// Expand home directory if needed
 	if path == "" {
@@ -83,7 +83,7 @@ func LoadConfig(path string) (*Config, error) {
 	return &config, nil
 }
 
-// CreateDefaultConfig creates a default configuration file
+// CreateDefaultConfig creates a default configuration file.
 func CreateDefaultConfig(path string) error {
 	// Create default config
 	config := Config{

@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
-// analyzeGenres analyzes viewing patterns by genre
+// analyzeGenres analyzes viewing patterns by genre.
 func (s *MediateServer) analyzeGenres(shows *shows.Shows, timeframe string) (string, map[string]interface{}) {
 	genreCount := make(map[string]int)
 	totalEpisodes := 0
@@ -26,7 +27,7 @@ func (s *MediateServer) analyzeGenres(shows *shows.Shows, timeframe string) (str
 		}
 	}
 
-	summary := fmt.Sprintf("Watched %d episodes across %d genres in the last %s", 
+	summary := fmt.Sprintf("Watched %d episodes across %d genres in the last %s",
 		totalEpisodes, len(genreCount), timeframe)
 
 	// Sort genres by count
@@ -34,28 +35,28 @@ func (s *MediateServer) analyzeGenres(shows *shows.Shows, timeframe string) (str
 		Genre string `json:"genre"`
 		Count int    `json:"count"`
 	}
-	
+
 	var sortedGenres []genreStats
 	for genre, count := range genreCount {
 		sortedGenres = append(sortedGenres, genreStats{Genre: genre, Count: count})
 	}
-	
+
 	sort.Slice(sortedGenres, func(i, j int) bool {
 		return sortedGenres[i].Count > sortedGenres[j].Count
 	})
 
 	data := map[string]interface{}{
-		"total_episodes":   totalEpisodes,
-		"total_genres":     len(genreCount),
-		"genre_breakdown":  genreCount,
-		"sorted_genres":    sortedGenres,
-		"top_genre":        s.getTopGenre(genreCount),
+		"total_episodes":  totalEpisodes,
+		"total_genres":    len(genreCount),
+		"genre_breakdown": genreCount,
+		"sorted_genres":   sortedGenres,
+		"top_genre":       s.getTopGenre(genreCount),
 	}
 
 	return summary, data
 }
 
-// analyzeShows analyzes viewing patterns by show
+// analyzeShows analyzes viewing patterns by show.
 func (s *MediateServer) analyzeShows(shows *shows.Shows, timeframe string) (string, map[string]interface{}) {
 	showStats := make(map[string]map[string]interface{})
 	totalWatched := 0
@@ -63,7 +64,7 @@ func (s *MediateServer) analyzeShows(shows *shows.Shows, timeframe string) (stri
 	for _, show := range *shows {
 		watchedCount := 0
 		totalCount := len(show.Episodes)
-		
+
 		for _, episode := range show.Episodes {
 			if episode.Watched && s.isInTimeframe(episode.LastViewedAt, timeframe) {
 				watchedCount++
@@ -78,12 +79,12 @@ func (s *MediateServer) analyzeShows(shows *shows.Shows, timeframe string) (stri
 				"total_episodes":   totalCount,
 				"completion_rate":  completionRate,
 				"continuing":       show.Continuing,
-				"rating":          show.Rating,
+				"rating":           show.Rating,
 			}
 		}
 	}
 
-	summary := fmt.Sprintf("Watched %d episodes across %d shows in the last %s", 
+	summary := fmt.Sprintf("Watched %d episodes across %d shows in the last %s",
 		totalWatched, len(showStats), timeframe)
 
 	// Get top shows by episodes watched
@@ -91,30 +92,30 @@ func (s *MediateServer) analyzeShows(shows *shows.Shows, timeframe string) (stri
 		Title   string `json:"title"`
 		Watched int    `json:"watched"`
 	}
-	
+
 	var topShows []showRank
 	for title, stats := range showStats {
 		if watched, ok := stats["watched_episodes"].(int); ok {
 			topShows = append(topShows, showRank{Title: title, Watched: watched})
 		}
 	}
-	
+
 	sort.Slice(topShows, func(i, j int) bool {
 		return topShows[i].Watched > topShows[j].Watched
 	})
 
 	data := map[string]interface{}{
-		"total_watched":     totalWatched,
-		"shows_watched":     len(showStats),
-		"shows":            showStats,
-		"top_shows":        topShows,
-		"most_watched":     s.getMostWatchedShow(showStats),
+		"total_watched": totalWatched,
+		"shows_watched": len(showStats),
+		"shows":         showStats,
+		"top_shows":     topShows,
+		"most_watched":  s.getMostWatchedShow(showStats),
 	}
 
 	return summary, data
 }
 
-// analyzePatterns analyzes viewing time patterns
+// analyzePatterns analyzes viewing time patterns.
 func (s *MediateServer) analyzePatterns(shows *shows.Shows, timeframe string) (string, map[string]interface{}) {
 	hourCounts := make(map[int]int)
 	dayCounts := make(map[string]int)
@@ -122,13 +123,12 @@ func (s *MediateServer) analyzePatterns(shows *shows.Shows, timeframe string) (s
 
 	for _, show := range *shows {
 		for _, episode := range show.Episodes {
-			if episode.Watched && episode.LastViewedAt != nil && 
-			   s.isInTimeframe(episode.LastViewedAt, timeframe) {
-				
+			if episode.Watched && episode.LastViewedAt != nil &&
+				s.isInTimeframe(episode.LastViewedAt, timeframe) {
 				viewTime := *episode.LastViewedAt
 				hour := viewTime.Hour()
 				day := viewTime.Weekday().String()
-				
+
 				hourCounts[hour]++
 				dayCounts[day]++
 				totalSessions++
@@ -139,22 +139,22 @@ func (s *MediateServer) analyzePatterns(shows *shows.Shows, timeframe string) (s
 	peakHour := s.getPeakHour(hourCounts)
 	peakDay := s.getPeakDay(dayCounts)
 
-	summary := fmt.Sprintf("Most active viewing time: %s at %d:00, with %d total sessions", 
+	summary := fmt.Sprintf("Most active viewing time: %s at %d:00, with %d total sessions",
 		peakDay, peakHour, totalSessions)
 
 	data := map[string]interface{}{
 		"total_sessions":   totalSessions,
 		"hourly_breakdown": hourCounts,
 		"daily_breakdown":  dayCounts,
-		"peak_hour":       peakHour,
-		"peak_day":        peakDay,
+		"peak_hour":        peakHour,
+		"peak_day":         peakDay,
 		"viewing_insights": s.getViewingInsights(hourCounts, dayCounts),
 	}
 
 	return summary, data
 }
 
-// analyzeCompletionRate analyzes show completion rates
+// analyzeCompletionRate analyzes show completion rates.
 func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe string) (string, map[string]interface{}) {
 	completedShows := 0
 	inProgressShows := 0
@@ -178,7 +178,7 @@ func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe stri
 		if totalCount > 0 {
 			completionRate = float64(watchedCount) / float64(totalCount) * 100
 		}
-		
+
 		completionRates = append(completionRates, completionRate)
 		showCompletions[show.Title] = completionRate
 
@@ -193,7 +193,7 @@ func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe stri
 
 	avgCompletion := s.calculateAverage(completionRates)
 
-	summary := fmt.Sprintf("Average completion rate: %.1f%% (%d completed, %d in progress, %d not started)", 
+	summary := fmt.Sprintf("Average completion rate: %.1f%% (%d completed, %d in progress, %d not started)",
 		avgCompletion, completedShows, inProgressShows, notStartedShows)
 
 	data := map[string]interface{}{
@@ -208,12 +208,12 @@ func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe stri
 	return summary, data
 }
 
-// generateRecommendations generates personalized recommendations
+// generateRecommendations generates personalized recommendations.
 func (s *MediateServer) generateRecommendations(mediaType string, basis string, limit int) []*Recommendation {
 	s.logger.Info("Generating recommendations", "type", mediaType, "basis", basis, "limit", limit)
 
 	recommendations := make([]*Recommendation, 0)
-	
+
 	// Get user's viewing data for analysis
 	shows := s.mediate.GetShows()
 	if shows == nil {
@@ -236,11 +236,11 @@ func (s *MediateServer) generateRecommendations(mediaType string, basis string, 
 	return recommendations
 }
 
-// generateFromHistory generates recommendations based on viewing history
+// generateFromHistory generates recommendations based on viewing history.
 func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string, limit int) []*Recommendation {
 	// Analyze user's preferred genres
 	genreScores := make(map[string]int)
-	
+
 	for _, show := range *shows {
 		watchedCount := 0
 		for _, episode := range show.Episodes {
@@ -248,7 +248,7 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 				watchedCount++
 			}
 		}
-		
+
 		if watchedCount > 0 {
 			genres := s.getShowGenres(show.Title)
 			for _, genre := range genres {
@@ -299,7 +299,7 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 	return recommendations
 }
 
-// generateSimilar generates recommendations based on similar shows
+// generateSimilar generates recommendations based on similar shows.
 func (s *MediateServer) generateSimilar(shows *shows.Shows, mediaType string, limit int) []*Recommendation {
 	// Simplified similar show recommendations
 	return []*Recommendation{
@@ -317,7 +317,7 @@ func (s *MediateServer) generateSimilar(shows *shows.Shows, mediaType string, li
 	}
 }
 
-// generatePopular generates popular recommendations
+// generatePopular generates popular recommendations.
 func (s *MediateServer) generatePopular(mediaType string, limit int) []*Recommendation {
 	return []*Recommendation{
 		{
@@ -334,7 +334,7 @@ func (s *MediateServer) generatePopular(mediaType string, limit int) []*Recommen
 	}
 }
 
-// generateNewReleases generates new release recommendations
+// generateNewReleases generates new release recommendations.
 func (s *MediateServer) generateNewReleases(mediaType string, limit int) []*Recommendation {
 	return []*Recommendation{
 		{
@@ -399,7 +399,7 @@ func (s *MediateServer) getShowGenres(title string) []string {
 	titleLower := strings.ToLower(title)
 	for showTitle, genres := range genreMap {
 		if strings.Contains(strings.ToLower(showTitle), titleLower) ||
-		   strings.Contains(titleLower, strings.ToLower(showTitle)) {
+			strings.Contains(titleLower, strings.ToLower(showTitle)) {
 			return genres
 		}
 	}
@@ -410,56 +410,56 @@ func (s *MediateServer) getShowGenres(title string) []string {
 func (s *MediateServer) getTopGenre(genreCount map[string]int) string {
 	maxCount := 0
 	topGenre := ""
-	
+
 	for genre, count := range genreCount {
 		if count > maxCount {
 			maxCount = count
 			topGenre = genre
 		}
 	}
-	
+
 	return topGenre
 }
 
 func (s *MediateServer) getMostWatchedShow(showStats map[string]map[string]interface{}) string {
 	maxWatched := 0
 	mostWatched := ""
-	
+
 	for show, stats := range showStats {
 		if watched, ok := stats["watched_episodes"].(int); ok && watched > maxWatched {
 			maxWatched = watched
 			mostWatched = show
 		}
 	}
-	
+
 	return mostWatched
 }
 
 func (s *MediateServer) getPeakHour(hourCounts map[int]int) int {
 	maxCount := 0
 	peakHour := 0
-	
+
 	for hour, count := range hourCounts {
 		if count > maxCount {
 			maxCount = count
 			peakHour = hour
 		}
 	}
-	
+
 	return peakHour
 }
 
 func (s *MediateServer) getPeakDay(dayCounts map[string]int) string {
 	maxCount := 0
 	peakDay := ""
-	
+
 	for day, count := range dayCounts {
 		if count > maxCount {
 			maxCount = count
 			peakDay = day
 		}
 	}
-	
+
 	return peakDay
 }
 
@@ -467,18 +467,18 @@ func (s *MediateServer) calculateAverage(values []float64) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	
+
 	sum := 0.0
 	for _, value := range values {
 		sum += value
 	}
-	
+
 	return sum / float64(len(values))
 }
 
 func (s *MediateServer) getViewingInsights(hourCounts map[int]int, dayCounts map[string]int) []string {
 	insights := make([]string, 0)
-	
+
 	// Peak viewing time insights
 	peakHour := s.getPeakHour(hourCounts)
 	if peakHour >= 20 && peakHour <= 23 {
@@ -486,31 +486,31 @@ func (s *MediateServer) getViewingInsights(hourCounts map[int]int, dayCounts map
 	} else if peakHour >= 12 && peakHour <= 17 {
 		insights = append(insights, "Afternoon viewing is your preference")
 	}
-	
+
 	// Weekend vs weekday insights
 	weekendCount := dayCounts["Saturday"] + dayCounts["Sunday"]
-	weekdayCount := dayCounts["Monday"] + dayCounts["Tuesday"] + dayCounts["Wednesday"] + 
-	                dayCounts["Thursday"] + dayCounts["Friday"]
-	
+	weekdayCount := dayCounts["Monday"] + dayCounts["Tuesday"] + dayCounts["Wednesday"] +
+		dayCounts["Thursday"] + dayCounts["Friday"]
+
 	if weekendCount > weekdayCount {
 		insights = append(insights, "You watch more on weekends than weekdays")
 	} else {
 		insights = append(insights, "You're consistent with weekday viewing")
 	}
-	
+
 	return insights
 }
 
-// ShowAnalysis represents detailed analysis for a specific show
+// ShowAnalysis represents detailed analysis for a specific show.
 type ShowAnalysis struct {
-	Show           ShowInfo                   `json:"show"`
-	Timeframe      string                     `json:"timeframe"`
-	UserFilter     string                     `json:"user_filter,omitempty"`
-	OverallStats   ShowStats                  `json:"overall_stats"`
-	UserBreakdown  map[string]*UserShowStats  `json:"user_breakdown"`
-	SeasonStats    map[int]*SeasonStats       `json:"season_stats"`
-	ViewingTrends  *ViewingTrends             `json:"viewing_trends"`
-	GeneratedAt    time.Time                  `json:"generated_at"`
+	Show          ShowInfo                  `json:"show"`
+	Timeframe     string                    `json:"timeframe"`
+	UserFilter    string                    `json:"user_filter,omitempty"`
+	OverallStats  ShowStats                 `json:"overall_stats"`
+	UserBreakdown map[string]*UserShowStats `json:"user_breakdown"`
+	SeasonStats   map[int]*SeasonStats      `json:"season_stats"`
+	ViewingTrends *ViewingTrends            `json:"viewing_trends"`
+	GeneratedAt   time.Time                 `json:"generated_at"`
 }
 
 type ShowInfo struct {
@@ -523,33 +523,33 @@ type ShowInfo struct {
 }
 
 type ShowStats struct {
-	TotalViews        int           `json:"total_views"`
-	UniqueViewers     int           `json:"unique_viewers"`
-	TotalWatchTime    time.Duration `json:"total_watch_time"`
-	AverageCompletion float64       `json:"average_completion"`
-	MostWatchedEpisode string       `json:"most_watched_episode"`
-	LeastWatchedEpisode string      `json:"least_watched_episode"`
-	BingeScore        float64       `json:"binge_score"` // How often episodes are watched consecutively
+	TotalViews          int           `json:"total_views"`
+	UniqueViewers       int           `json:"unique_viewers"`
+	TotalWatchTime      time.Duration `json:"total_watch_time"`
+	AverageCompletion   float64       `json:"average_completion"`
+	MostWatchedEpisode  string        `json:"most_watched_episode"`
+	LeastWatchedEpisode string        `json:"least_watched_episode"`
+	BingeScore          float64       `json:"binge_score"` // How often episodes are watched consecutively
 }
 
 type UserShowStats struct {
-	Username          string        `json:"username"`
-	EpisodesWatched   int           `json:"episodes_watched"`
-	TotalWatchTime    time.Duration `json:"total_watch_time"`
-	CompletionRate    float64       `json:"completion_rate"`
-	FavoriteSeason    int           `json:"favorite_season"`
-	ViewingFrequency  string        `json:"viewing_frequency"`
-	LastWatched       *time.Time    `json:"last_watched,omitempty"`
+	Username         string        `json:"username"`
+	EpisodesWatched  int           `json:"episodes_watched"`
+	TotalWatchTime   time.Duration `json:"total_watch_time"`
+	CompletionRate   float64       `json:"completion_rate"`
+	FavoriteSeason   int           `json:"favorite_season"`
+	ViewingFrequency string        `json:"viewing_frequency"`
+	LastWatched      *time.Time    `json:"last_watched,omitempty"`
 }
 
 type SeasonStats struct {
-	Season          int           `json:"season"`
-	EpisodeCount    int           `json:"episode_count"`
-	TotalViews      int           `json:"total_views"`
-	AverageViews    float64       `json:"average_views"`
-	CompletionRate  float64       `json:"completion_rate"`
-	TotalWatchTime  time.Duration `json:"total_watch_time"`
-	MostPopular     string        `json:"most_popular_episode"`
+	Season         int           `json:"season"`
+	EpisodeCount   int           `json:"episode_count"`
+	TotalViews     int           `json:"total_views"`
+	AverageViews   float64       `json:"average_views"`
+	CompletionRate float64       `json:"completion_rate"`
+	TotalWatchTime time.Duration `json:"total_watch_time"`
+	MostPopular    string        `json:"most_popular_episode"`
 }
 
 type ViewingTrends struct {
@@ -559,7 +559,7 @@ type ViewingTrends struct {
 	PopularDevices []string       `json:"popular_devices"`
 }
 
-// analyzeIndividualShow provides detailed analysis for a specific show
+// analyzeIndividualShow provides detailed analysis for a specific show.
 func (s *MediateServer) analyzeIndividualShow(show *shows.Show, timeframe string, userFilter string) *ShowAnalysis {
 	analysis := &ShowAnalysis{
 		Show: ShowInfo{
@@ -578,7 +578,7 @@ func (s *MediateServer) analyzeIndividualShow(show *shows.Show, timeframe string
 
 	// Get viewing sessions for this show (simulated for now since we don't have real session data yet)
 	sessions := s.getViewingSessionsForShow(show, timeframe)
-	
+
 	// Filter by user if specified
 	if userFilter != "" {
 		sessions = sessions.ByUser(userFilter)
@@ -586,7 +586,7 @@ func (s *MediateServer) analyzeIndividualShow(show *shows.Show, timeframe string
 
 	// Calculate overall stats
 	analysis.OverallStats = s.calculateShowStats(show, sessions)
-	
+
 	// Calculate per-user breakdown
 	userStats := sessions.GetUserStats()
 	for username, stats := range userStats {
@@ -601,7 +601,7 @@ func (s *MediateServer) analyzeIndividualShow(show *shows.Show, timeframe string
 
 	// Calculate season stats
 	analysis.SeasonStats = s.calculateSeasonStats(show, sessions)
-	
+
 	// Calculate viewing trends
 	analysis.ViewingTrends = s.calculateViewingTrends(sessions)
 
@@ -617,55 +617,61 @@ func (s *MediateServer) analyzeIndividualShow(show *shows.Show, timeframe string
 	return analysis
 }
 
-// EpisodeAnalysis represents detailed analysis for episodes
+// EpisodeAnalysis represents detailed analysis for episodes.
 type EpisodeAnalysis struct {
-	Show         ShowInfo              `json:"show"`
-	Season       int                   `json:"season,omitempty"`
-	UserFilter   string                `json:"user_filter,omitempty"`
-	Episodes     []*EpisodeStats       `json:"episodes"`
-	Summary      EpisodeSummary        `json:"summary"`
-	SortBy       string                `json:"sort_by"`
-	GeneratedAt  time.Time             `json:"generated_at"`
+	Show        ShowInfo        `json:"show"`
+	Season      int             `json:"season,omitempty"`
+	UserFilter  string          `json:"user_filter,omitempty"`
+	Episodes    []*EpisodeStats `json:"episodes"`
+	Summary     EpisodeSummary  `json:"summary"`
+	SortBy      string          `json:"sort_by"`
+	GeneratedAt time.Time       `json:"generated_at"`
 }
 
 type EpisodeStats struct {
-	Title            string                    `json:"title"`
-	Season           int                       `json:"season"`
-	Episode          int                       `json:"episode"`
-	TvdbID           int                       `json:"tvdb_id"`
-	AirDate          *time.Time                `json:"air_date,omitempty"`
-	Duration         time.Duration             `json:"duration"`
-	ViewCount        int                       `json:"view_count"`
-	UniqueViewers    int                       `json:"unique_viewers"`
-	AverageCompletion float64                  `json:"average_completion"`
-	TotalWatchTime   time.Duration             `json:"total_watch_time"`
-	LastWatched      *time.Time                `json:"last_watched,omitempty"`
-	UserStats        map[string]*UserEpisodeStats `json:"user_stats"`
-	PopularityRank   int                       `json:"popularity_rank"`
-	SkipRate         float64                   `json:"skip_rate"`
-	ReplayRate       float64                   `json:"replay_rate"`
+	Title             string                       `json:"title"`
+	Season            int                          `json:"season"`
+	Episode           int                          `json:"episode"`
+	TvdbID            int                          `json:"tvdb_id"`
+	AirDate           *time.Time                   `json:"air_date,omitempty"`
+	Duration          time.Duration                `json:"duration"`
+	ViewCount         int                          `json:"view_count"`
+	UniqueViewers     int                          `json:"unique_viewers"`
+	AverageCompletion float64                      `json:"average_completion"`
+	TotalWatchTime    time.Duration                `json:"total_watch_time"`
+	LastWatched       *time.Time                   `json:"last_watched,omitempty"`
+	UserStats         map[string]*UserEpisodeStats `json:"user_stats"`
+	PopularityRank    int                          `json:"popularity_rank"`
+	SkipRate          float64                      `json:"skip_rate"`
+	ReplayRate        float64                      `json:"replay_rate"`
 }
 
 type UserEpisodeStats struct {
-	Username       string    `json:"username"`
-	ViewCount      int       `json:"view_count"`
-	CompletionRate float64   `json:"completion_rate"`
-	LastWatched    *time.Time `json:"last_watched,omitempty"`
+	Username       string        `json:"username"`
+	ViewCount      int           `json:"view_count"`
+	CompletionRate float64       `json:"completion_rate"`
+	LastWatched    *time.Time    `json:"last_watched,omitempty"`
 	WatchTime      time.Duration `json:"watch_time"`
 }
 
 type EpisodeSummary struct {
-	TotalEpisodes    int           `json:"total_episodes"`
-	TotalViews       int           `json:"total_views"`
-	AverageViews     float64       `json:"average_views"`
-	TotalWatchTime   time.Duration `json:"total_watch_time"`
-	MostPopular      string        `json:"most_popular"`
-	LeastPopular     string        `json:"least_popular"`
-	HighestRated     string        `json:"highest_rated"`
+	TotalEpisodes  int           `json:"total_episodes"`
+	TotalViews     int           `json:"total_views"`
+	AverageViews   float64       `json:"average_views"`
+	TotalWatchTime time.Duration `json:"total_watch_time"`
+	MostPopular    string        `json:"most_popular"`
+	LeastPopular   string        `json:"least_popular"`
+	HighestRated   string        `json:"highest_rated"`
 }
 
-// analyzeEpisodes provides detailed analysis for episodes
-func (s *MediateServer) analyzeEpisodes(show *shows.Show, season int, userFilter string, sortBy string, limit int) *EpisodeAnalysis {
+// analyzeEpisodes provides detailed analysis for episodes.
+func (s *MediateServer) analyzeEpisodes(
+	show *shows.Show,
+	season int,
+	userFilter string,
+	sortBy string,
+	limit int,
+) *EpisodeAnalysis {
 	analysis := &EpisodeAnalysis{
 		Show: ShowInfo{
 			Title:      show.Title,
@@ -697,27 +703,27 @@ func (s *MediateServer) analyzeEpisodes(show *shows.Show, season int, userFilter
 	// Analyze each episode
 	for _, episode := range episodes {
 		sessions := s.getViewingSessionsForEpisode(episode)
-		
+
 		if userFilter != "" {
 			sessions = sessions.ByUser(userFilter)
 		}
 
 		episodeStats := &EpisodeStats{
-			Title:         episode.Title,
-			Season:        episode.Season,
-			Episode:       episode.Episode,
-			TvdbID:        episode.TvdbID,
-			AirDate:       episode.AirDate,
-			Duration:      episode.Duration,
-			ViewCount:     episode.ViewCount,
-			LastWatched:   episode.LastViewedAt,
-			UserStats:     make(map[string]*UserEpisodeStats),
+			Title:       episode.Title,
+			Season:      episode.Season,
+			Episode:     episode.Episode,
+			TvdbID:      episode.TvdbID,
+			AirDate:     episode.AirDate,
+			Duration:    episode.Duration,
+			ViewCount:   episode.ViewCount,
+			LastWatched: episode.LastViewedAt,
+			UserStats:   make(map[string]*UserEpisodeStats),
 		}
 
 		// Calculate episode metrics from sessions
 		episodeStats.UniqueViewers = len(sessions.GetUserStats())
 		episodeStats.TotalWatchTime = sessions.TotalWatchTime()
-		
+
 		// Calculate completion rate
 		if len(sessions) > 0 {
 			completed := sessions.Completed()
@@ -771,7 +777,7 @@ func (s *MediateServer) getViewingSessionsForShow(show *shows.Show, timeframe st
 	// TODO: Query actual viewing sessions from database
 	// For now, return simulated data based on existing episode data
 	sessions := make(shows.ViewingSessions, 0)
-	
+
 	for _, episode := range show.Episodes {
 		if episode.Watched && episode.LastViewedAt != nil {
 			session := &shows.ViewingSession{
@@ -785,14 +791,14 @@ func (s *MediateServer) getViewingSessionsForShow(show *shows.Show, timeframe st
 			sessions = append(sessions, session)
 		}
 	}
-	
+
 	return sessions.InTimeframe(s.getTimeframeCutoff(timeframe))
 }
 
 func (s *MediateServer) getViewingSessionsForEpisode(episode *shows.Episode) shows.ViewingSessions {
 	// TODO: Query actual viewing sessions from database
 	sessions := make(shows.ViewingSessions, 0)
-	
+
 	if episode.Watched && episode.LastViewedAt != nil {
 		session := &shows.ViewingSession{
 			EpisodeTvdbID:   episode.TvdbID,
@@ -804,30 +810,30 @@ func (s *MediateServer) getViewingSessionsForEpisode(episode *shows.Episode) sho
 		}
 		sessions = append(sessions, session)
 	}
-	
+
 	return sessions
 }
 
 func (s *MediateServer) calculateShowStats(show *shows.Show, sessions shows.ViewingSessions) ShowStats {
 	stats := ShowStats{}
-	
+
 	stats.TotalViews = len(sessions)
 	stats.TotalWatchTime = sessions.TotalWatchTime()
-	
+
 	userStats := sessions.GetUserStats()
 	stats.UniqueViewers = len(userStats)
-	
+
 	if len(sessions) > 0 {
 		completed := sessions.Completed()
 		stats.AverageCompletion = float64(len(completed)) / float64(len(sessions)) * 100
 	}
-	
+
 	return stats
 }
 
 func (s *MediateServer) calculateSeasonStats(show *shows.Show, sessions shows.ViewingSessions) map[int]*SeasonStats {
 	seasonMap := make(map[int]*SeasonStats)
-	
+
 	for _, episode := range show.Episodes {
 		season := episode.Season
 		if _, exists := seasonMap[season]; !exists {
@@ -835,21 +841,21 @@ func (s *MediateServer) calculateSeasonStats(show *shows.Show, sessions shows.Vi
 				Season: season,
 			}
 		}
-		
+
 		seasonMap[season].EpisodeCount++
-		
+
 		if episode.Watched {
 			seasonMap[season].TotalViews++
 		}
 	}
-	
+
 	// Calculate averages
 	for _, stats := range seasonMap {
 		if stats.EpisodeCount > 0 {
 			stats.AverageViews = float64(stats.TotalViews) / float64(stats.EpisodeCount)
 		}
 	}
-	
+
 	return seasonMap
 }
 
@@ -859,17 +865,17 @@ func (s *MediateServer) calculateViewingTrends(sessions shows.ViewingSessions) *
 		HourlyViewing: make(map[int]int),
 		WeeklyTrend:   make([]int, 7),
 	}
-	
+
 	for _, session := range sessions {
 		day := session.StartedAt.Weekday().String()
 		hour := session.StartedAt.Hour()
 		weekday := int(session.StartedAt.Weekday())
-		
+
 		trends.DailyViewing[day]++
 		trends.HourlyViewing[hour]++
 		trends.WeeklyTrend[weekday]++
 	}
-	
+
 	return trends
 }
 
@@ -878,9 +884,9 @@ func (s *MediateServer) calculateViewingFrequency(totalSessions int, timeframe s
 	if days == 0 {
 		return "unknown"
 	}
-	
+
 	avgPerDay := float64(totalSessions) / float64(days)
-	
+
 	if avgPerDay >= 2 {
 		return "heavy"
 	} else if avgPerDay >= 0.5 {
@@ -963,7 +969,7 @@ func (s *MediateServer) getTimeframeDays(timeframe string) int {
 	}
 }
 
-// analyzeDeletedMediaTrends analyzes viewing trends for deleted media
+// analyzeDeletedMediaTrends analyzes viewing trends for deleted media.
 func (s *MediateServer) analyzeDeletedMediaTrends(timeframe string) (*DeletedMediaAnalysis, error) {
 	deletedMedia, err := s.mediate.DB.GetDeletedMedia(0, 0)
 	if err != nil {
@@ -1042,21 +1048,21 @@ func (s *MediateServer) analyzeDeletedMediaTrends(timeframe string) (*DeletedMed
 	return analysis, nil
 }
 
-// DeletedMediaAnalysis represents comprehensive analysis of deleted media
+// DeletedMediaAnalysis represents comprehensive analysis of deleted media.
 type DeletedMediaAnalysis struct {
-	Timeframe           string                            `json:"timeframe"`
-	GeneratedAt         time.Time                         `json:"generated_at"`
-	TotalItems          int                               `json:"total_items"`
-	ActiveItems         int                               `json:"active_items"`
-	TotalViews          int                               `json:"total_views"`
-	TotalWatchTime      time.Duration                     `json:"total_watch_time"`
-	ViewsByUser         map[string]int                    `json:"views_by_user"`
-	DeletionsByMonth    map[string]int                    `json:"deletions_by_month"`
-	MediaStats          map[string]*DeletedMediaTypeStats `json:"media_stats"`
-	MostWatchedDeleted  *DeletedMediaHighlight            `json:"most_watched_deleted"`
+	Timeframe          string                            `json:"timeframe"`
+	GeneratedAt        time.Time                         `json:"generated_at"`
+	TotalItems         int                               `json:"total_items"`
+	ActiveItems        int                               `json:"active_items"`
+	TotalViews         int                               `json:"total_views"`
+	TotalWatchTime     time.Duration                     `json:"total_watch_time"`
+	ViewsByUser        map[string]int                    `json:"views_by_user"`
+	DeletionsByMonth   map[string]int                    `json:"deletions_by_month"`
+	MediaStats         map[string]*DeletedMediaTypeStats `json:"media_stats"`
+	MostWatchedDeleted *DeletedMediaHighlight            `json:"most_watched_deleted"`
 }
 
-// DeletedMediaTypeStats provides statistics for a specific media type
+// DeletedMediaTypeStats provides statistics for a specific media type.
 type DeletedMediaTypeStats struct {
 	MediaType      string        `json:"media_type"`
 	Count          int           `json:"count"`
@@ -1065,7 +1071,7 @@ type DeletedMediaTypeStats struct {
 	AverageViews   float64       `json:"average_views"`
 }
 
-// DeletedMediaHighlight highlights notable deleted media
+// DeletedMediaHighlight highlights notable deleted media.
 type DeletedMediaHighlight struct {
 	Title          string        `json:"title"`
 	MediaType      string        `json:"media_type"`
@@ -1074,7 +1080,7 @@ type DeletedMediaHighlight struct {
 	DeletedAt      time.Time     `json:"deleted_at"`
 }
 
-// CalculateDeletedMediaImpact analyzes the viewing impact of deleted media
+// CalculateDeletedMediaImpact analyzes the viewing impact of deleted media.
 func (s *MediateServer) CalculateDeletedMediaImpact() (*DeletedMediaImpact, error) {
 	deletedSummary, err := s.mediate.DB.GetDeletedMediaSummary()
 	if err != nil {
@@ -1084,7 +1090,7 @@ func (s *MediateServer) CalculateDeletedMediaImpact() (*DeletedMediaImpact, erro
 	// Get current active media stats for comparison
 	shows := s.mediate.GetShows()
 	if shows == nil {
-		return nil, fmt.Errorf("unable to get current shows data")
+		return nil, errors.New("unable to get current shows data")
 	}
 
 	var activeViews int
@@ -1102,11 +1108,11 @@ func (s *MediateServer) CalculateDeletedMediaImpact() (*DeletedMediaImpact, erro
 	}
 
 	impact := &DeletedMediaImpact{
-		DeletedViews:      deletedSummary.TotalViews,
-		DeletedWatchTime:  deletedSummary.TotalWatchTime,
-		ActiveViews:       activeViews,
-		ActiveWatchTime:   activeWatchTime,
-		GeneratedAt:       time.Now(),
+		DeletedViews:     deletedSummary.TotalViews,
+		DeletedWatchTime: deletedSummary.TotalWatchTime,
+		ActiveViews:      activeViews,
+		ActiveWatchTime:  activeWatchTime,
+		GeneratedAt:      time.Now(),
 	}
 
 	// Calculate impact percentages
@@ -1123,7 +1129,7 @@ func (s *MediateServer) CalculateDeletedMediaImpact() (*DeletedMediaImpact, erro
 	return impact, nil
 }
 
-// DeletedMediaImpact represents the impact analysis of deleted media
+// DeletedMediaImpact represents the impact analysis of deleted media.
 type DeletedMediaImpact struct {
 	DeletedViews            int           `json:"deleted_views"`
 	DeletedWatchTime        time.Duration `json:"deleted_watch_time"`

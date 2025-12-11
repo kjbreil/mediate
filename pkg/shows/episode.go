@@ -87,14 +87,14 @@ type Episode struct {
 	AirDate       *time.Time
 	Downloading   bool
 	Duration      time.Duration
-	
+
 	// Enhanced viewing analytics
-	ViewCount        int       `gorm:"default:0"`
-	FirstViewedAt    *time.Time
-	TotalWatchTime   time.Duration
-	CompletionRate   float64   `gorm:"default:0"` // 0-100% how much of episode was watched
-	SkipCount        int       `gorm:"default:0"` // How many times user skipped this episode
-	Rating           float64   `gorm:"default:0"` // User rating if available
+	ViewCount      int `gorm:"default:0"`
+	FirstViewedAt  *time.Time
+	TotalWatchTime time.Duration
+	CompletionRate float64 `gorm:"default:0"` // 0-100% how much of episode was watched
+	SkipCount      int     `gorm:"default:0"` // How many times user skipped this episode
+	Rating         float64 `gorm:"default:0"` // User rating if available
 }
 
 func (e *Episode) IsPilot() bool {

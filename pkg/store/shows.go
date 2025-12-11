@@ -60,7 +60,8 @@ func (s *Store) GetShow(tvdbID int) *shows.Show {
 		show.Library = s.libraries[show.LibraryUUID]
 		return &show
 	}
-	result = s.Joins("JOIN episodes ON episodes.show_tvdb_id = shows.tvdb_id AND episodes.tvdb_id = ?", tvdbID).Find(&show)
+	result = s.Joins("JOIN episodes ON episodes.show_tvdb_id = shows.tvdb_id AND episodes.tvdb_id = ?", tvdbID).
+		Find(&show)
 	if result.RowsAffected != 0 {
 		show.Library = s.libraries[show.LibraryUUID]
 		return &show
@@ -77,7 +78,8 @@ func (s *Store) GetShowFromRatingKey(ratingKey string) *shows.Show {
 	// 	show.Library = s.libraries[show.LibraryUUID]
 	// 	return &show
 	// }
-	result := s.Joins("JOIN episodes ON episodes.show_tvdb_id = shows.tvdb_id AND episodes.plex_rating_key =?", ratingKey).Find(&show)
+	result := s.Joins("JOIN episodes ON episodes.show_tvdb_id = shows.tvdb_id AND episodes.plex_rating_key =?", ratingKey).
+		Find(&show)
 	if result.RowsAffected != 0 {
 		show.Library = s.libraries[show.LibraryUUID]
 		return &show
@@ -131,6 +133,9 @@ func (s *Store) SonarrIds(ids ...int) shows.Episodes {
 
 func (s *Store) NextXEpisodes(x int, ep *shows.Episode) shows.Episodes {
 	var episodes shows.Episodes
-	s.Where("show_tvdb_id =? AND  season_episode >?", ep.ShowTvdbID, ep.SeasonEpisode).Limit(x).Order("season ASC, episode ASC").Find(&episodes)
+	s.Where("show_tvdb_id =? AND  season_episode >?", ep.ShowTvdbID, ep.SeasonEpisode).
+		Limit(x).
+		Order("season ASC, episode ASC").
+		Find(&episodes)
 	return episodes
 }

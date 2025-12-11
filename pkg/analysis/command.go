@@ -1,18 +1,19 @@
 package analysis
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/kjbreil/mediate/pkg/cli"
-	"github.com/kjbreil/mediate/pkg/mediate"
 	"github.com/kjbreil/mediate/pkg/mcp"
+	"github.com/kjbreil/mediate/pkg/mediate"
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
-// RunAnalysis executes the analysis based on CLI configuration
+// RunAnalysis executes the analysis based on CLI configuration.
 func RunAnalysis(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error {
 	if cfg.ScanDeleted {
 		return runScanDeleted(m, logger)
@@ -22,17 +23,17 @@ func RunAnalysis(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error
 		return runAnalyze(cfg, m, logger)
 	}
 
-	return fmt.Errorf("no analysis action specified")
+	return errors.New("no analysis action specified")
 }
 
-// runScanDeleted scans for deleted media
+// runScanDeleted scans for deleted media.
 func runScanDeleted(m *mediate.Mediate, logger *slog.Logger) error {
 	fmt.Println("🔍 Scanning for deleted/orphaned media...")
 
 	// For now, use hardcoded config values since GetConfig() doesn't exist
 	// This should be replaced with actual config access
 	if m == nil {
-		return fmt.Errorf("Plex configuration not found. Please check config file")
+		return errors.New("Plex configuration not found. Please check config file")
 	}
 
 	// TODO: Add proper config access to get Plex URL and token
@@ -42,7 +43,7 @@ func runScanDeleted(m *mediate.Mediate, logger *slog.Logger) error {
 	return nil
 }
 
-// runAnalyze runs the specified analysis
+// runAnalyze runs the specified analysis.
 func runAnalyze(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error {
 	// Create MCP server for analysis functions
 	mcpServer := mcp.NewMediateServer(m, logger)
@@ -52,12 +53,12 @@ func runAnalyze(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error 
 		return analyzeViewingHabits(mcpServer)
 	case "show":
 		if cfg.AnalyzeShow == "" {
-			return fmt.Errorf("--show parameter required for show analysis")
+			return errors.New("--show parameter required for show analysis")
 		}
 		return analyzeShow(mcpServer, cfg.AnalyzeShow)
 	case "episodes":
 		if cfg.AnalyzeShow == "" {
-			return fmt.Errorf("--show parameter required for episode analysis")
+			return errors.New("--show parameter required for episode analysis")
 		}
 		return analyzeEpisodes(mcpServer, cfg.AnalyzeShow)
 	case "deleted":
@@ -67,14 +68,14 @@ func runAnalyze(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error 
 	}
 }
 
-// analyzeViewingHabits analyzes overall viewing habits
+// analyzeViewingHabits analyzes overall viewing habits.
 func analyzeViewingHabits(server *mcp.MediateServer) error {
 	fmt.Println("📊 Analyzing viewing habits...")
 
 	// Use a simple approach for now - create JSON output and parse key stats
 	showsData := server.GetMediate().GetShows()
 	if showsData == nil {
-		return fmt.Errorf("unable to retrieve shows data")
+		return errors.New("unable to retrieve shows data")
 	}
 
 	var totalEpisodes, watchedEpisodes int
@@ -117,14 +118,14 @@ func analyzeViewingHabits(server *mcp.MediateServer) error {
 	return nil
 }
 
-// analyzeShow analyzes a specific show
+// analyzeShow analyzes a specific show.
 func analyzeShow(server *mcp.MediateServer, showTitle string) error {
 	fmt.Printf("🎬 Analyzing show: %s\n", showTitle)
 
 	// Find the show
 	showsData := server.GetMediate().GetShows()
 	if showsData == nil {
-		return fmt.Errorf("unable to retrieve shows data")
+		return errors.New("unable to retrieve shows data")
 	}
 
 	var targetShow *shows.Show
@@ -142,7 +143,7 @@ func analyzeShow(server *mcp.MediateServer, showTitle string) error {
 	// Calculate basic statistics
 	var totalEpisodes, watchedEpisodes int
 	var seasons = make(map[int]int) // season -> episode count
-	
+
 	for _, episode := range targetShow.Episodes {
 		totalEpisodes++
 		seasons[episode.Season]++
@@ -157,7 +158,7 @@ func analyzeShow(server *mcp.MediateServer, showTitle string) error {
 	}
 
 	// Print results
-	fmt.Printf("📚 Show: %s (%d seasons, %d episodes)\n", 
+	fmt.Printf("📚 Show: %s (%d seasons, %d episodes)\n",
 		targetShow.Title, len(seasons), totalEpisodes)
 	fmt.Printf("📊 Overall Stats:\n")
 	fmt.Printf("  • Total Episodes: %d\n", totalEpisodes)
@@ -186,14 +187,14 @@ func analyzeShow(server *mcp.MediateServer, showTitle string) error {
 	return nil
 }
 
-// analyzeEpisodes analyzes episodes for a specific show
+// analyzeEpisodes analyzes episodes for a specific show.
 func analyzeEpisodes(server *mcp.MediateServer, showTitle string) error {
 	fmt.Printf("📺 Analyzing episodes for: %s\n", showTitle)
 
 	// Find the show
 	showsData := server.GetMediate().GetShows()
 	if showsData == nil {
-		return fmt.Errorf("unable to retrieve shows data")
+		return errors.New("unable to retrieve shows data")
 	}
 
 	var targetShow *shows.Show
@@ -210,13 +211,13 @@ func analyzeEpisodes(server *mcp.MediateServer, showTitle string) error {
 
 	var totalEpisodes, watchedEpisodes int
 	var totalWatchTime time.Duration
-	
+
 	// Sort episodes by view count (simulated since we don't have real view counts yet)
 	type episodeInfo struct {
 		episode *shows.Episode
 		watched bool
 	}
-	
+
 	var episodeList []episodeInfo
 	for _, episode := range targetShow.Episodes {
 		totalEpisodes++
@@ -246,9 +247,9 @@ func analyzeEpisodes(server *mcp.MediateServer, showTitle string) error {
 	if len(episodeList) < count {
 		count = len(episodeList)
 	}
-	
+
 	// Sort by season/episode descending (most recent episodes first)
-	for i := 0; i < len(episodeList)-1; i++ {
+	for i := range len(episodeList) - 1 {
 		for j := i + 1; j < len(episodeList); j++ {
 			ep1 := episodeList[i].episode
 			ep2 := episodeList[j].episode
@@ -257,27 +258,27 @@ func analyzeEpisodes(server *mcp.MediateServer, showTitle string) error {
 			}
 		}
 	}
-	
-	for i := 0; i < count; i++ {
+
+	for i := range count {
 		ep := episodeList[i].episode
 		status := "⭕ Not Watched"
 		if episodeList[i].watched {
 			status = "✅ Watched"
 		}
-		
+
 		lastViewed := "Never"
 		if ep.LastViewedAt != nil {
 			lastViewed = ep.LastViewedAt.Format("2006-01-02")
 		}
-		
-		fmt.Printf("  S%02dE%02d: %s %s (Last: %s)\n", 
+
+		fmt.Printf("  S%02dE%02d: %s %s (Last: %s)\n",
 			ep.Season, ep.Episode, ep.Title, status, lastViewed)
 	}
 
 	return nil
 }
 
-// analyzeDeletedMedia analyzes deleted media
+// analyzeDeletedMedia analyzes deleted media.
 func analyzeDeletedMedia(server *mcp.MediateServer) error {
 	fmt.Println("🗑️  Analyzing deleted media...")
 
@@ -304,7 +305,7 @@ func analyzeDeletedMedia(server *mcp.MediateServer) error {
 		if len(summary.TopDeletedShows) < count {
 			count = len(summary.TopDeletedShows)
 		}
-		for i := 0; i < count; i++ {
+		for i := range count {
 			stats := summary.TopDeletedShows[i]
 			fmt.Printf("  %d. %s (%s): %d views, %v watch time\n",
 				i+1, stats.Title, stats.MediaType, stats.TotalViews, stats.TotalWatchTime)
@@ -322,7 +323,7 @@ func printTopGenres(data map[string]interface{}) {
 		if len(sortedGenres) < count {
 			count = len(sortedGenres)
 		}
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if genreMap, ok := sortedGenres[i].(map[string]interface{}); ok {
 				genre := genreMap["genre"].(string)
 				viewCount := genreMap["count"].(int)
@@ -338,7 +339,7 @@ func printTopShows(data map[string]interface{}) {
 		if len(topShows) < count {
 			count = len(topShows)
 		}
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if showMap, ok := topShows[i].(map[string]interface{}); ok {
 				title := showMap["title"].(string)
 				watched := showMap["watched"].(int)
@@ -357,7 +358,7 @@ func printViewingPatterns(data map[string]interface{}) {
 	}
 }
 
-// getSimpleGenres returns simplified genre mapping
+// getSimpleGenres returns simplified genre mapping.
 func getSimpleGenres(title string) []string {
 	genreMap := map[string][]string{
 		"What We Do in the Shadows": {"Comedy", "Horror"},
@@ -390,67 +391,67 @@ func getSimpleGenres(title string) []string {
 	return []string{"Drama"} // Default genre
 }
 
-// printGenreStats prints genre statistics in a formatted way
+// printGenreStats prints genre statistics in a formatted way.
 func printGenreStats(genreStats map[string]int) {
 	type genreStat struct {
 		genre string
 		count int
 	}
-	
+
 	var genres []genreStat
 	for genre, count := range genreStats {
 		genres = append(genres, genreStat{genre, count})
 	}
-	
+
 	// Sort by count descending
-	for i := 0; i < len(genres)-1; i++ {
+	for i := range len(genres) - 1 {
 		for j := i + 1; j < len(genres); j++ {
 			if genres[j].count > genres[i].count {
 				genres[i], genres[j] = genres[j], genres[i]
 			}
 		}
 	}
-	
+
 	count := 5
 	if len(genres) < count {
 		count = len(genres)
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		fmt.Printf("  • %s: %d episodes\n", genres[i].genre, genres[i].count)
 	}
 }
 
-// printShowStats prints show statistics in a formatted way
+// printShowStats prints show statistics in a formatted way.
 func printShowStats(showStats map[string]int) {
 	type showStat struct {
 		title string
 		count int
 	}
-	
+
 	var shows []showStat
 	for title, count := range showStats {
 		shows = append(shows, showStat{title, count})
 	}
-	
+
 	// Sort by count descending
-	for i := 0; i < len(shows)-1; i++ {
+	for i := range len(shows) - 1 {
 		for j := i + 1; j < len(shows); j++ {
 			if shows[j].count > shows[i].count {
 				shows[i], shows[j] = shows[j], shows[i]
 			}
 		}
 	}
-	
+
 	count := 10
 	if len(shows) < count {
 		count = len(shows)
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		fmt.Printf("  • %s: %d episodes\n", shows[i].title, shows[i].count)
 	}
 }
 
-// getShowStatus returns a simplified status for a show
+// getShowStatus returns a simplified status for a show.
 func getShowStatus(show *shows.Show) string {
 	if show.Continuing {
 		return "Continuing"

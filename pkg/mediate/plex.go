@@ -2,12 +2,13 @@ package mediate
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/go-plex/plex"
 	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
-	"sync"
-	"time"
 )
 
 type plexActivity struct {
@@ -45,7 +46,6 @@ func (m *Mediate) RefreshShowsEpisodes(episodes shows.Episodes) {
 		}
 	}
 	for _, s := range shows {
-
 		m.RefreshShow(s)
 	}
 }
@@ -77,7 +77,6 @@ func (m *Mediate) RefreshShow(s *shows.Show) error {
 }
 
 func (m *Mediate) OnPlexPlaying(f func(pp *PlexPlaying)) {
-
 	playing := &plexActivity{
 		playing: make(map[int]*PlexPlaying),
 		m:       sync.Mutex{},
@@ -115,7 +114,6 @@ func (m *Mediate) OnPlexPlaying(f func(pp *PlexPlaying)) {
 			f(pp)
 			pp.m.Unlock()
 		}
-
 	})
 	m.plex.SubscribeToNotifications()
 
@@ -143,13 +141,10 @@ func (m *Mediate) OnPlexPlaying(f func(pp *PlexPlaying)) {
 	// })
 
 	// m.plex.ServeWebhook()
-
 }
 
 func (m *Mediate) loadPlexShows(lib *library.Library) error {
-
 	for _, show := range *m.DB.GetShows() {
-
 		plexShow, _, _ := lib.Shows.FindTvdbID(show.TvdbID)
 		if plexShow == nil {
 			continue
@@ -161,8 +156,7 @@ func (m *Mediate) loadPlexShows(lib *library.Library) error {
 		show.Ignore = m.config.Plex.Ignore(show.LibraryTitle())
 		show.LibraryUUID = lib.UUID
 
-		var ss shows.Show
-		ss = *show
+		var ss = *show
 		ss.Episodes = nil
 		m.DB.Save(ss)
 
@@ -183,7 +177,6 @@ func (m *Mediate) loadPlexShows(lib *library.Library) error {
 }
 
 func (m *Mediate) loadPlexMovies(lib *library.Library) error {
-
 	for _, movie := range m.Movies {
 		plexMovie := lib.Movies.FindTMDB(movie.TmdbID)
 		if plexMovie == nil {

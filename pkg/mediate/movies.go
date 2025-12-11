@@ -11,7 +11,6 @@ func (m *Mediate) loadMovies() error {
 		return err
 	}
 	for _, radarrMovie := range allMovies {
-
 		movie := &movies.Movie{
 			Title:            radarrMovie.Title,
 			PlexRatingKey:    "",

@@ -51,14 +51,14 @@ func main() {
 	// Load configuration
 	var c *config.Config
 	var err error
-	
+
 	if cliConfig.ConfigFile != "" {
 		// Load configuration from specified file
 		logger.Info("Loading configuration from file", "file", cliConfig.ConfigFile)
 		c, err = config.LoadConfig(cliConfig.ConfigFile)
 		if err != nil {
 			logger.Error("Failed to load config file", "error", err)
-			
+
 			// If --create-config flag is set, create default config
 			if cliConfig.CreateConfig {
 				logger.Info("Creating default configuration file", "file", cliConfig.ConfigFile)
@@ -90,12 +90,12 @@ func main() {
 				}
 			}
 		}
-		
+
 		// If no config was loaded, use hardcoded defaults
 		if c == nil {
 			logger.Warn("Using hardcoded configuration. This is not recommended for production use.")
 			logger.Info("Create a config file with --config=/path/to/config.yaml --create-config")
-			
+
 			c = &config.Config{
 				Plex: config.Plex{
 					URL:   "http://plex1.kaygel.io:32400",
@@ -154,7 +154,7 @@ func main() {
 			log.Fatal(err)
 		}
 		defer m.Close()
-		
+
 		// Run MCP server mode
 		runMCPServer(m, logger, cliConfig)
 		return
@@ -180,10 +180,10 @@ func main() {
 	runJobMode(m, logger, cliConfig)
 }
 
-// runMCPServer runs the application in MCP server mode
+// runMCPServer runs the application in MCP server mode.
 func runMCPServer(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
-	logger.Info("Starting Mediate in MCP server mode", 
-		"transport", cliConfig.Transport, 
+	logger.Info("Starting Mediate in MCP server mode",
+		"transport", cliConfig.Transport,
 		"port", cliConfig.Port)
 
 	// Create MCP server
@@ -205,7 +205,7 @@ func runMCPServer(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config
 	logger.Info("MCP server started, press Ctrl+C to stop")
 	ctrlC := make(chan os.Signal, 1)
 	signal.Notify(ctrlC, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	select {
 	case <-ctrlC:
 		logger.Info("Received interrupt signal")
@@ -220,7 +220,7 @@ func runMCPServer(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config
 	logger.Info("MCP server stopped")
 }
 
-// runJobMode runs the application in traditional job mode
+// runJobMode runs the application in traditional job mode.
 func runJobMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
 	logger.Info("Starting Mediate in job mode")
 
@@ -255,7 +255,7 @@ func runJobMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) 
 			logger.Warn("Unknown job", "name", jobName)
 		}
 	}
-	
+
 	// Register watcher jobs based on command-line flags
 	if cliConfig.WatchPlex {
 		svc.AddWatcherJob("plex-watch", j.PlexWatchJob)
@@ -278,7 +278,7 @@ func runJobMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) 
 	logger.Info("Service stopped")
 }
 
-// runAnalysisMode runs the application in analysis mode
+// runAnalysisMode runs the application in analysis mode.
 func runAnalysisMode(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config) {
 	logger.Info("Starting Mediate in analysis mode")
 

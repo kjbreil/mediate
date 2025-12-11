@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-// JobType represents the type of job
+// JobType represents the type of job.
 type JobType int
 
 const (
-	// ScheduledJob runs at regular intervals
+	// ScheduledJob runs at regular intervals.
 	ScheduledJob JobType = iota
-	// WatcherJob runs continuously (like event listeners)
+	// WatcherJob runs continuously (like event listeners).
 	WatcherJob
 )
 
-// Job represents a scheduled job that runs at a specified interval
+// Job represents a scheduled job that runs at a specified interval.
 type Job struct {
 	Name     string
 	Interval time.Duration
@@ -29,7 +29,7 @@ type Job struct {
 	Type     JobType
 }
 
-// Service manages the execution of multiple jobs
+// Service manages the execution of multiple jobs.
 type Service struct {
 	jobs   []*Job
 	logger *slog.Logger
@@ -38,7 +38,7 @@ type Service struct {
 	cancel context.CancelFunc
 }
 
-// NewService creates a new service with the given logger
+// NewService creates a new service with the given logger.
 func NewService(logger *slog.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
@@ -49,7 +49,7 @@ func NewService(logger *slog.Logger) *Service {
 	}
 }
 
-// AddJob adds a new scheduled job to the service
+// AddJob adds a new scheduled job to the service.
 func (s *Service) AddJob(name string, interval time.Duration, fn func() error) *Job {
 	job := &Job{
 		Name:     name,
@@ -65,7 +65,7 @@ func (s *Service) AddJob(name string, interval time.Duration, fn func() error) *
 }
 
 // AddWatcherJob adds a new watcher job to the service
-// Watcher jobs run once when started and are expected to set up event listeners
+// Watcher jobs run once when started and are expected to set up event listeners.
 func (s *Service) AddWatcherJob(name string, fn func() error) *Job {
 	job := &Job{
 		Name:     name,
@@ -80,7 +80,7 @@ func (s *Service) AddWatcherJob(name string, fn func() error) *Job {
 	return job
 }
 
-// Start starts all enabled jobs
+// Start starts all enabled jobs.
 func (s *Service) Start() {
 	for _, job := range s.jobs {
 		if job.Enabled {
@@ -90,7 +90,7 @@ func (s *Service) Start() {
 	}
 }
 
-// runJob runs a job based on its type
+// runJob runs a job based on its type.
 func (s *Service) runJob(job *Job) {
 	defer s.wg.Done()
 
@@ -128,7 +128,7 @@ func (s *Service) runJob(job *Job) {
 	}
 }
 
-// executeJob executes a job and logs any errors
+// executeJob executes a job and logs any errors.
 func (s *Service) executeJob(job *Job) {
 	s.logger.Info("Running job", "name", job.Name)
 	start := time.Now()
@@ -142,7 +142,7 @@ func (s *Service) executeJob(job *Job) {
 	s.logger.Info("Job completed", "name", job.Name, "duration", time.Since(start))
 }
 
-// Stop stops all running jobs and waits for them to complete
+// Stop stops all running jobs and waits for them to complete.
 func (s *Service) Stop() {
 	s.logger.Info("Stopping all jobs")
 	s.cancel()
@@ -150,7 +150,7 @@ func (s *Service) Stop() {
 	s.logger.Info("All jobs stopped")
 }
 
-// EnableJob enables a job by name
+// EnableJob enables a job by name.
 func (s *Service) EnableJob(name string) bool {
 	for _, job := range s.jobs {
 		if job.Name == name {
@@ -161,7 +161,7 @@ func (s *Service) EnableJob(name string) bool {
 	return false
 }
 
-// DisableJob disables a job by name
+// DisableJob disables a job by name.
 func (s *Service) DisableJob(name string) bool {
 	for _, job := range s.jobs {
 		if job.Name == name {
@@ -175,7 +175,7 @@ func (s *Service) DisableJob(name string) bool {
 	return false
 }
 
-// GetJobs returns all jobs
+// GetJobs returns all jobs.
 func (s *Service) GetJobs() []*Job {
 	return s.jobs
 }

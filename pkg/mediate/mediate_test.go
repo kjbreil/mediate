@@ -76,5 +76,4 @@ func TestNew(t *testing.T) {
 	// m.findUnwatched()
 	// m.setMonitored()
 	// m.MarkOnlyPilotUnwatched()
-
 }

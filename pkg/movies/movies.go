@@ -38,7 +38,6 @@ func (m *Movie) WatchedOutside(d time.Duration) bool {
 }
 
 func (m *Movie) WatchedBeforeDownload() bool {
-
 	if m.LastViewedAt == nil {
 		return false
 	}

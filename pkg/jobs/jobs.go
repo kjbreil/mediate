@@ -9,13 +9,13 @@ import (
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
-// Jobs contains all the job functions
+// Jobs contains all the job functions.
 type Jobs struct {
 	mediate *mediate.Mediate
 	logger  *slog.Logger
 }
 
-// New creates a new Jobs instance
+// New creates a new Jobs instance.
 func New(m *mediate.Mediate, logger *slog.Logger) *Jobs {
 	return &Jobs{
 		mediate: m,
@@ -23,7 +23,7 @@ func New(m *mediate.Mediate, logger *slog.Logger) *Jobs {
 	}
 }
 
-// MonitorJob handles monitoring episodes and setting monitoring status
+// MonitorJob handles monitoring episodes and setting monitoring status.
 func (j *Jobs) MonitorJob() error {
 	j.logger.Info("Running monitor job")
 
@@ -49,7 +49,7 @@ func (j *Jobs) MonitorJob() error {
 	return nil
 }
 
-// DownloadJob handles downloading episodes
+// DownloadJob handles downloading episodes.
 func (j *Jobs) DownloadJob() error {
 	j.logger.Info("Running download job")
 
@@ -75,7 +75,7 @@ func (j *Jobs) DownloadJob() error {
 	return nil
 }
 
-// DeleteJob handles deleting episodes
+// DeleteJob handles deleting episodes.
 func (j *Jobs) DeleteJob() error {
 	j.logger.Info("Running delete job")
 
@@ -106,7 +106,7 @@ func (j *Jobs) DeleteJob() error {
 	return nil
 }
 
-// RefreshJob handles refreshing shows and episodes
+// RefreshJob handles refreshing shows and episodes.
 func (j *Jobs) RefreshJob() error {
 	j.logger.Info("Running refresh job")
 
@@ -120,7 +120,7 @@ func (j *Jobs) RefreshJob() error {
 	return nil
 }
 
-// PlexWatchJob sets up a Plex watcher
+// PlexWatchJob sets up a Plex watcher.
 func (j *Jobs) PlexWatchJob() error {
 	j.logger.Info("Setting up Plex watch job")
 

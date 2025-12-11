@@ -11,12 +11,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// handleAnalyzeViewingHabits handles the analyze_viewing_habits tool
-func (s *MediateServer) handleAnalyzeViewingHabits(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleAnalyzeViewingHabits handles the analyze_viewing_habits tool.
+func (s *MediateServer) handleAnalyzeViewingHabits(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling analyze_viewing_habits request")
 
 	// Parse arguments
-	timeframe := "month" // default
+	timeframe := "month"    // default
 	analysisType := "shows" // default
 
 	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
@@ -87,12 +90,15 @@ func (s *MediateServer) handleAnalyzeViewingHabits(ctx context.Context, request 
 	}, nil
 }
 
-// handleGetRecommendations handles the get_recommendations tool
-func (s *MediateServer) handleGetRecommendations(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleGetRecommendations handles the get_recommendations tool.
+func (s *MediateServer) handleGetRecommendations(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling get_recommendations request")
 
 	// Parse arguments
-	mediaType := "shows" // default
+	mediaType := "shows"       // default
 	basis := "viewing_history" // default
 
 	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
@@ -129,14 +135,17 @@ func (s *MediateServer) handleGetRecommendations(ctx context.Context, request mc
 	}, nil
 }
 
-// handleSearchMedia handles the search_media tool
-func (s *MediateServer) handleSearchMedia(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleSearchMedia handles the search_media tool.
+func (s *MediateServer) handleSearchMedia(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling search_media request")
 
 	// Parse arguments
 	var query string
 	mediaType := "both" // default
-	source := "all" // default
+	source := "all"     // default
 
 	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
 		if q, exists := args["query"]; exists {
@@ -186,8 +195,11 @@ func (s *MediateServer) handleSearchMedia(ctx context.Context, request mcp.CallT
 	}, nil
 }
 
-// handleAddToDownloads handles the add_to_downloads tool
-func (s *MediateServer) handleAddToDownloads(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleAddToDownloads handles the add_to_downloads tool.
+func (s *MediateServer) handleAddToDownloads(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling add_to_downloads request")
 
 	// Parse arguments
@@ -237,8 +249,11 @@ func (s *MediateServer) handleAddToDownloads(ctx context.Context, request mcp.Ca
 	}, nil
 }
 
-// handleGetSystemStatus handles the get_system_status tool
-func (s *MediateServer) handleGetSystemStatus(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleGetSystemStatus handles the get_system_status tool.
+func (s *MediateServer) handleGetSystemStatus(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling get_system_status request")
 
 	// Parse arguments
@@ -271,8 +286,12 @@ func (s *MediateServer) handleGetSystemStatus(ctx context.Context, request mcp.C
 		},
 	}, nil
 }
-// handleAnalyzeShow handles the analyze_show tool
-func (s *MediateServer) handleAnalyzeShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
+// handleAnalyzeShow handles the analyze_show tool.
+func (s *MediateServer) handleAnalyzeShow(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling analyze_show request")
 
 	// Parse arguments
@@ -351,8 +370,11 @@ func (s *MediateServer) handleAnalyzeShow(ctx context.Context, request mcp.CallT
 	}, nil
 }
 
-// handleAnalyzeEpisodes handles the analyze_episodes tool
-func (s *MediateServer) handleAnalyzeEpisodes(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleAnalyzeEpisodes handles the analyze_episodes tool.
+func (s *MediateServer) handleAnalyzeEpisodes(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling analyze_episodes request")
 
 	// Parse arguments
@@ -437,8 +459,11 @@ func (s *MediateServer) handleAnalyzeEpisodes(ctx context.Context, request mcp.C
 	}, nil
 }
 
-// handleAnalyzeDeletedMedia handles the analyze_deleted_media tool
-func (s *MediateServer) handleAnalyzeDeletedMedia(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleAnalyzeDeletedMedia handles the analyze_deleted_media tool.
+func (s *MediateServer) handleAnalyzeDeletedMedia(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling analyze_deleted_media request")
 
 	// Parse arguments
@@ -539,8 +564,11 @@ func (s *MediateServer) handleAnalyzeDeletedMedia(ctx context.Context, request m
 	}, nil
 }
 
-// handleScanDeletedMedia handles the scan_deleted_media tool
-func (s *MediateServer) handleScanDeletedMedia(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleScanDeletedMedia handles the scan_deleted_media tool.
+func (s *MediateServer) handleScanDeletedMedia(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	s.logger.Info("Handling scan_deleted_media request")
 
 	// Parse arguments
@@ -556,13 +584,13 @@ func (s *MediateServer) handleScanDeletedMedia(ctx context.Context, request mcp.
 	// Create Plex history client - placeholder implementation
 	// Note: You would need to implement actual Plex configuration access
 	s.logger.Info("Starting orphaned record detection scan", "force_rescan", forceRescan)
-	
+
 	// For now, return a placeholder result since we need Plex config integration
 	result := map[string]interface{}{
-		"scan_completed_at":    time.Now(),
-		"status":              "scan_not_implemented",
-		"message":             "Plex configuration integration needed for actual scanning",
-		"force_rescan":        forceRescan,
+		"scan_completed_at": time.Now(),
+		"status":            "scan_not_implemented",
+		"message":           "Plex configuration integration needed for actual scanning",
+		"force_rescan":      forceRescan,
 	}
 
 	// Convert to JSON

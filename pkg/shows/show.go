@@ -17,9 +17,7 @@ type Show struct {
 
 func (s *Show) GetEpisodes() Episodes {
 	rtn := make(Episodes, 0)
-	for _, epi := range s.Episodes {
-		rtn = append(rtn, epi)
-	}
+	rtn = append(rtn, s.Episodes...)
 	return rtn
 }
 

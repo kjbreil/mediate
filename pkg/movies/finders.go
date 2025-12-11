@@ -51,5 +51,5 @@ func (m Movies) Find(fn FindFunc) (rtn []*Movie) {
 		}
 	}
 
-	return
+	return rtn
 }

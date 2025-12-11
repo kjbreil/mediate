@@ -2,12 +2,13 @@ package mediate
 
 import (
 	"fmt"
+	"path/filepath"
+	"time"
+
 	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
 	"golift.io/starr/radarr"
 	"golift.io/starr/sonarr"
-	"path/filepath"
-	"time"
 )
 
 func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error) {
@@ -24,7 +25,7 @@ func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error
 		}
 	}
 
-	return
+	return rtn, errors
 }
 
 func (m *Mediate) RecentlyWatched() shows.Episodes {
@@ -33,11 +34,9 @@ func (m *Mediate) RecentlyWatched() shows.Episodes {
 	return episodes
 }
 
-// SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored
+// SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored.
 func (m *Mediate) SetMonitored() {
-
 	for _, show := range *m.DB.GetShows() {
-
 		if show.Ignore {
 			continue
 		}
@@ -130,7 +129,6 @@ func (m *Mediate) SetMonitored() {
 
 				episodes = show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
 				m.DownloadEpisodes(episodes)
-
 			}
 			if show.Rating < 5 {
 				var ser *sonarr.Series
@@ -174,13 +172,11 @@ func (m *Mediate) SetMonitored() {
 					continue
 				}
 			}
-
 		}
 
 		episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
 		m.DownloadEpisodes(episodes)
 	}
-
 }
 
 func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
@@ -190,7 +186,15 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 	for _, ep := range episodes {
 		if ep.Wanted {
 			toDelete = append(toDelete, ep.SonarrId)
-			m.logger.Info("Marking episode as unmonitored", "sonarrId", ep.SonarrId, "season", ep.Season, "episode", ep.Episode)
+			m.logger.Info(
+				"Marking episode as unmonitored",
+				"sonarrId",
+				ep.SonarrId,
+				"season",
+				ep.Season,
+				"episode",
+				ep.Episode,
+			)
 		}
 	}
 
@@ -205,7 +209,15 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 
 	for _, ep := range episodes {
 		if ep.HasFile {
-			m.logger.Info("Deleting episode file", "sonarrFileId", ep.SonarrFileId, "season", ep.Season, "episode", ep.Episode)
+			m.logger.Info(
+				"Deleting episode file",
+				"sonarrFileId",
+				ep.SonarrFileId,
+				"season",
+				ep.Season,
+				"episode",
+				ep.Episode,
+			)
 			err := m.sonarr.DeleteEpisodeFile(ep.SonarrFileId)
 			if err != nil {
 				m.logger.Error("Failed to delete episode file", "sonarrFileId", ep.SonarrFileId, "err", err.Error())

@@ -10,14 +10,14 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// MediateServer implements the MCP server for Mediate
+// MediateServer implements the MCP server for Mediate.
 type MediateServer struct {
 	mediate *mediate.Mediate
 	logger  *slog.Logger
 	server  *server.MCPServer
 }
 
-// NewMediateServer creates a new MCP server instance
+// NewMediateServer creates a new MCP server instance.
 func NewMediateServer(m *mediate.Mediate, logger *slog.Logger) *MediateServer {
 	srv := &MediateServer{
 		mediate: m,
@@ -38,7 +38,7 @@ func NewMediateServer(m *mediate.Mediate, logger *slog.Logger) *MediateServer {
 	return srv
 }
 
-// registerTools registers all MCP tools
+// registerTools registers all MCP tools.
 func (s *MediateServer) registerTools() {
 	// Viewing habits analysis tool
 	s.server.AddTool(mcp.Tool{
@@ -48,13 +48,13 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"timeframe": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"week", "month", "quarter", "year", "all"},
+					"type":        "string",
+					"enum":        []string{"week", "month", "quarter", "year", "all"},
 					"description": "Time period to analyze",
 				},
 				"analysis_type": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"genres", "shows", "patterns", "completion_rate"},
+					"type":        "string",
+					"enum":        []string{"genres", "shows", "patterns", "completion_rate"},
 					"description": "Type of analysis to perform",
 				},
 			},
@@ -69,13 +69,13 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"type": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"shows", "movies", "both"},
+					"type":        "string",
+					"enum":        []string{"shows", "movies", "both"},
 					"description": "Type of media to recommend",
 				},
 				"basis": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"viewing_history", "similar_shows", "popular", "new_releases"},
+					"type":        "string",
+					"enum":        []string{"viewing_history", "similar_shows", "popular", "new_releases"},
 					"description": "Basis for recommendations",
 				},
 			},
@@ -90,17 +90,17 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"query": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Search query (title, actor, director, etc.)",
 				},
 				"type": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"shows", "movies", "both"},
+					"type":        "string",
+					"enum":        []string{"shows", "movies", "both"},
 					"description": "Type of media to search",
 				},
 				"source": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"plex", "sonarr", "radarr", "all"},
+					"type":        "string",
+					"enum":        []string{"plex", "sonarr", "radarr", "all"},
 					"description": "Which service to search",
 				},
 			},
@@ -131,7 +131,7 @@ func (s *MediateServer) registerTools() {
 								"type": "integer",
 							},
 							"monitor": map[string]interface{}{
-								"type": "boolean",
+								"type":    "boolean",
 								"default": true,
 							},
 						},
@@ -139,7 +139,7 @@ func (s *MediateServer) registerTools() {
 					},
 				},
 				"quality_profile": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Quality profile to use",
 				},
 			},
@@ -155,14 +155,14 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"detailed": map[string]interface{}{
-					"type": "boolean",
-					"default": false,
+					"type":        "boolean",
+					"default":     false,
 					"description": "Include detailed service information",
 				},
 			},
 		},
 	}, s.handleGetSystemStatus)
-	
+
 	// Individual show analysis tool
 	s.server.AddTool(mcp.Tool{
 		Name:        "analyze_show",
@@ -171,21 +171,21 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"show_title": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Title of the show to analyze",
 				},
 				"tvdb_id": map[string]interface{}{
-					"type": "integer",
+					"type":        "integer",
 					"description": "TVDB ID of the show (optional, alternative to title)",
 				},
 				"timeframe": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"week", "month", "quarter", "year", "all"},
+					"type":        "string",
+					"enum":        []string{"week", "month", "quarter", "year", "all"},
 					"description": "Time period to analyze",
-					"default": "all",
+					"default":     "all",
 				},
 				"user": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Specific Plex username to analyze (optional)",
 				},
 			},
@@ -200,26 +200,26 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"show_title": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Title of the show to analyze episodes for",
 				},
 				"tvdb_id": map[string]interface{}{
-					"type": "integer",
+					"type":        "integer",
 					"description": "TVDB ID of the show (optional, alternative to title)",
 				},
 				"season": map[string]interface{}{
-					"type": "integer",
+					"type":        "integer",
 					"description": "Specific season to analyze (optional)",
 				},
 				"user": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Specific Plex username to analyze (optional)",
 				},
 				"sort_by": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"view_count", "completion_rate", "air_date", "episode_number"},
+					"type":        "string",
+					"enum":        []string{"view_count", "completion_rate", "air_date", "episode_number"},
 					"description": "How to sort the episode results",
-					"default": "episode_number",
+					"default":     "episode_number",
 				},
 			},
 		},
@@ -233,23 +233,23 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"action": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"scan", "summary", "list", "details"},
+					"type":        "string",
+					"enum":        []string{"scan", "summary", "list", "details"},
 					"description": "Action to perform: scan for new deletions, get summary, list deleted media, or get details",
-					"default": "summary",
+					"default":     "summary",
 				},
 				"rating_key": map[string]interface{}{
-					"type": "string",
+					"type":        "string",
 					"description": "Specific Plex rating key for details action",
 				},
 				"media_type": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"movie", "show", "episode", "all"},
+					"type":        "string",
+					"enum":        []string{"movie", "show", "episode", "all"},
 					"description": "Filter by media type",
-					"default": "all",
+					"default":     "all",
 				},
 				"library_id": map[string]interface{}{
-					"type": "integer",
+					"type":        "integer",
 					"description": "Filter by library section ID",
 				},
 			},
@@ -264,16 +264,16 @@ func (s *MediateServer) registerTools() {
 			Type: "object",
 			Properties: map[string]interface{}{
 				"force_rescan": map[string]interface{}{
-					"type": "boolean",
+					"type":        "boolean",
 					"description": "Force a complete rescan even if recently scanned",
-					"default": false,
+					"default":     false,
 				},
 			},
 		},
 	}, s.handleScanDeletedMedia)
 }
 
-// registerResources registers all MCP resources
+// registerResources registers all MCP resources.
 func (s *MediateServer) registerResources() {
 	// Viewing history resource
 	s.server.AddResource(mcp.Resource{
@@ -300,26 +300,26 @@ func (s *MediateServer) registerResources() {
 	}, s.handleDownloadQueueResource)
 }
 
-// Start starts the MCP server with stdio transport
+// Start starts the MCP server with stdio transport.
 func (s *MediateServer) Start(ctx context.Context) error {
 	s.logger.Info("Starting Mediate MCP server")
-	
+
 	// Start with stdio transport (for Claude Desktop integration)
 	return server.ServeStdio(s.server)
 }
 
-// Close closes the MCP server and cleans up resources
+// Close closes the MCP server and cleans up resources.
 func (s *MediateServer) Close() error {
 	s.logger.Info("Shutting down Mediate MCP server")
 	return nil
 }
 
-// GetMediate returns the underlying Mediate instance
+// GetMediate returns the underlying Mediate instance.
 func (s *MediateServer) GetMediate() *mediate.Mediate {
 	return s.mediate
 }
 
-// GetDB returns the database instance
+// GetDB returns the database instance.
 func (s *MediateServer) GetDB() *store.Store {
 	return s.mediate.DB
 }

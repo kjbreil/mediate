@@ -2,10 +2,11 @@ package mediate
 
 import (
 	"fmt"
-	"github.com/kjbreil/mediate/pkg/shows"
-	"golift.io/starr/sonarr"
 	"sync"
 	"time"
+
+	"github.com/kjbreil/mediate/pkg/shows"
+	"golift.io/starr/sonarr"
 )
 
 func (m *Mediate) loadShows() error {
@@ -20,7 +21,6 @@ func (m *Mediate) loadShows() error {
 
 	start := time.Now()
 	for _, ser := range allSeries {
-
 		s, _ := m.DB.AddSonarrSeries(ser)
 
 		wg.Add(1)
@@ -36,7 +36,6 @@ func (m *Mediate) loadShows() error {
 				return
 			}
 		}(s)
-
 	}
 	wg.Wait()
 	m.UpdateDownloading()
@@ -46,7 +45,6 @@ func (m *Mediate) loadShows() error {
 }
 
 func (m *Mediate) UpdateDownloading() {
-
 	_, _ = m.sonarr.SendCommand(&sonarr.CommandRequest{
 		Name: "RefreshMonitoredDownloads",
 	})
@@ -68,7 +66,6 @@ func (m *Mediate) UpdateEpisode(ep *shows.Episode) {
 }
 
 func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
-
 	buf := make(chan struct{}, 10)
 	defer close(buf)
 	wg := &sync.WaitGroup{}
@@ -78,7 +75,6 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 		return err
 	}
 	for _, ep := range episodes {
-
 		e, _ := m.DB.AddSonarrEpisode(s, ep)
 
 		if ep.HasFile {
