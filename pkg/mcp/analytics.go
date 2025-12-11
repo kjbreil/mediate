@@ -126,6 +126,7 @@ func (s *MediateServer) analyzePatterns(shows *shows.Shows, timeframe string) (s
 			if episode.Watched && episode.LastViewedAt != nil &&
 				s.isInTimeframe(episode.LastViewedAt, timeframe) {
 				viewTime := *episode.LastViewedAt
+
 				hour := viewTime.Hour()
 				day := viewTime.Weekday().String()
 
@@ -155,7 +156,7 @@ func (s *MediateServer) analyzePatterns(shows *shows.Shows, timeframe string) (s
 }
 
 // analyzeCompletionRate analyzes show completion rates.
-func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe string) (string, map[string]interface{}) {
+func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, _ string) (string, map[string]interface{}) {
 	completedShows := 0
 	inProgressShows := 0
 	notStartedShows := 0
@@ -182,11 +183,12 @@ func (s *MediateServer) analyzeCompletionRate(shows *shows.Shows, timeframe stri
 		completionRates = append(completionRates, completionRate)
 		showCompletions[show.Title] = completionRate
 
-		if completionRate == 100 {
+		switch {
+		case completionRate == 100:
 			completedShows++
-		} else if completionRate > 0 {
+		case completionRate > 0:
 			inProgressShows++
-		} else {
+		default:
 			notStartedShows++
 		}
 	}
@@ -237,7 +239,7 @@ func (s *MediateServer) generateRecommendations(mediaType string, basis string, 
 }
 
 // generateFromHistory generates recommendations based on viewing history.
-func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string, limit int) []*Recommendation {
+func (s *MediateServer) generateFromHistory(shows *shows.Shows, _ string, _ int) []*Recommendation {
 	// Analyze user's preferred genres
 	genreScores := make(map[string]int)
 
@@ -261,7 +263,7 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 	recommendations := []*Recommendation{
 		{
 			Title:       "Better Call Saul",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.95,
 			Reason:      "Based on your viewing of crime dramas",
 			Genre:       []string{"Drama", "Crime"},
@@ -272,7 +274,7 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 		},
 		{
 			Title:       "The Wire",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.92,
 			Reason:      "Highly rated crime drama similar to your preferences",
 			Genre:       []string{"Drama", "Crime"},
@@ -283,7 +285,7 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 		},
 		{
 			Title:       "Succession",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.89,
 			Reason:      "Popular drama series with complex characters",
 			Genre:       []string{"Drama", "Comedy"},
@@ -300,12 +302,12 @@ func (s *MediateServer) generateFromHistory(shows *shows.Shows, mediaType string
 }
 
 // generateSimilar generates recommendations based on similar shows.
-func (s *MediateServer) generateSimilar(shows *shows.Shows, mediaType string, limit int) []*Recommendation {
+func (s *MediateServer) generateSimilar(_ *shows.Shows, _ string, _ int) []*Recommendation {
 	// Simplified similar show recommendations
 	return []*Recommendation{
 		{
 			Title:       "Dark",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.88,
 			Reason:      "Complex sci-fi drama with mystery elements",
 			Genre:       []string{"Sci-Fi", "Mystery"},
@@ -318,11 +320,11 @@ func (s *MediateServer) generateSimilar(shows *shows.Shows, mediaType string, li
 }
 
 // generatePopular generates popular recommendations.
-func (s *MediateServer) generatePopular(mediaType string, limit int) []*Recommendation {
+func (s *MediateServer) generatePopular(_ string, _ int) []*Recommendation {
 	return []*Recommendation{
 		{
 			Title:       "The Bear",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.94,
 			Reason:      "Currently trending comedy-drama",
 			Genre:       []string{"Comedy", "Drama"},
@@ -335,11 +337,11 @@ func (s *MediateServer) generatePopular(mediaType string, limit int) []*Recommen
 }
 
 // generateNewReleases generates new release recommendations.
-func (s *MediateServer) generateNewReleases(mediaType string, limit int) []*Recommendation {
+func (s *MediateServer) generateNewReleases(_ string, _ int) []*Recommendation {
 	return []*Recommendation{
 		{
 			Title:       "House of the Dragon",
-			Type:        "show",
+			Type:        mediaTypeShow,
 			Score:       0.85,
 			Reason:      "New fantasy epic series",
 			Genre:       []string{"Fantasy", "Drama"},
@@ -360,15 +362,15 @@ func (s *MediateServer) isInTimeframe(timestamp *time.Time, timeframe string) bo
 
 	now := time.Now()
 	switch timeframe {
-	case "week":
+	case timeframeWeek:
 		return timestamp.After(now.AddDate(0, 0, -7))
-	case "month":
+	case timeframeMonth:
 		return timestamp.After(now.AddDate(0, -1, 0))
-	case "quarter":
+	case timeframeQuarter:
 		return timestamp.After(now.AddDate(0, -3, 0))
-	case "year":
+	case timeframeYear:
 		return timestamp.After(now.AddDate(-1, 0, 0))
-	case "all":
+	case timeframeAll:
 		return true
 	default:
 		return false
@@ -670,7 +672,7 @@ func (s *MediateServer) analyzeEpisodes(
 	season int,
 	userFilter string,
 	sortBy string,
-	limit int,
+	_ int,
 ) *EpisodeAnalysis {
 	analysis := &EpisodeAnalysis{
 		Show: ShowInfo{
@@ -814,7 +816,7 @@ func (s *MediateServer) getViewingSessionsForEpisode(episode *shows.Episode) sho
 	return sessions
 }
 
-func (s *MediateServer) calculateShowStats(show *shows.Show, sessions shows.ViewingSessions) ShowStats {
+func (s *MediateServer) calculateShowStats(_ *shows.Show, sessions shows.ViewingSessions) ShowStats {
 	stats := ShowStats{}
 
 	stats.TotalViews = len(sessions)
@@ -831,7 +833,7 @@ func (s *MediateServer) calculateShowStats(show *shows.Show, sessions shows.View
 	return stats
 }
 
-func (s *MediateServer) calculateSeasonStats(show *shows.Show, sessions shows.ViewingSessions) map[int]*SeasonStats {
+func (s *MediateServer) calculateSeasonStats(show *shows.Show, _ shows.ViewingSessions) map[int]*SeasonStats {
 	seasonMap := make(map[int]*SeasonStats)
 
 	for _, episode := range show.Episodes {
@@ -868,6 +870,7 @@ func (s *MediateServer) calculateViewingTrends(sessions shows.ViewingSessions) *
 
 	for _, session := range sessions {
 		day := session.StartedAt.Weekday().String()
+
 		hour := session.StartedAt.Hour()
 		weekday := int(session.StartedAt.Weekday())
 
@@ -887,14 +890,16 @@ func (s *MediateServer) calculateViewingFrequency(totalSessions int, timeframe s
 
 	avgPerDay := float64(totalSessions) / float64(days)
 
-	if avgPerDay >= 2 {
+	switch {
+	case avgPerDay >= 2:
 		return "heavy"
-	} else if avgPerDay >= 0.5 {
+	case avgPerDay >= 0.5:
 		return "regular"
-	} else if avgPerDay >= 0.1 {
+	case avgPerDay >= 0.1:
 		return "light"
+	default:
+		return "rare"
 	}
-	return "rare"
 }
 
 func (s *MediateServer) sortEpisodes(episodes []*EpisodeStats, sortBy string) {
@@ -941,13 +946,13 @@ func (s *MediateServer) sortEpisodes(episodes []*EpisodeStats, sortBy string) {
 func (s *MediateServer) getTimeframeCutoff(timeframe string) time.Time {
 	now := time.Now()
 	switch timeframe {
-	case "week":
+	case timeframeWeek:
 		return now.AddDate(0, 0, -7)
-	case "month":
+	case timeframeMonth:
 		return now.AddDate(0, -1, 0)
-	case "quarter":
+	case timeframeQuarter:
 		return now.AddDate(0, -3, 0)
-	case "year":
+	case timeframeYear:
 		return now.AddDate(-1, 0, 0)
 	default:
 		return time.Time{} // All time
@@ -956,96 +961,17 @@ func (s *MediateServer) getTimeframeCutoff(timeframe string) time.Time {
 
 func (s *MediateServer) getTimeframeDays(timeframe string) int {
 	switch timeframe {
-	case "week":
+	case timeframeWeek:
 		return 7
-	case "month":
+	case timeframeMonth:
 		return 30
-	case "quarter":
+	case timeframeQuarter:
 		return 90
-	case "year":
+	case timeframeYear:
 		return 365
 	default:
 		return 0
 	}
-}
-
-// analyzeDeletedMediaTrends analyzes viewing trends for deleted media.
-func (s *MediateServer) analyzeDeletedMediaTrends(timeframe string) (*DeletedMediaAnalysis, error) {
-	deletedMedia, err := s.mediate.DB.GetDeletedMedia(0, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	analysis := &DeletedMediaAnalysis{
-		Timeframe:   timeframe,
-		GeneratedAt: time.Now(),
-		TotalItems:  len(deletedMedia),
-		MediaStats:  make(map[string]*DeletedMediaTypeStats),
-	}
-
-	// Calculate cutoff time for timeframe filtering
-	cutoff := s.getTimeframeCutoff(timeframe)
-
-	var totalViews int
-	var totalWatchTime time.Duration
-	viewsByUser := make(map[string]int)
-	deletionsByMonth := make(map[string]int)
-
-	for _, media := range deletedMedia {
-		// Skip if outside timeframe (based on deletion date)
-		if !cutoff.IsZero() && media.DeletedAt.Before(cutoff) {
-			continue
-		}
-
-		analysis.ActiveItems++
-		totalViews += media.TotalViews
-		totalWatchTime += media.TotalWatchTime
-
-		// Track by media type
-		if _, exists := analysis.MediaStats[media.MediaType]; !exists {
-			analysis.MediaStats[media.MediaType] = &DeletedMediaTypeStats{
-				MediaType: media.MediaType,
-			}
-		}
-		stats := analysis.MediaStats[media.MediaType]
-		stats.Count++
-		stats.TotalViews += media.TotalViews
-		stats.TotalWatchTime += media.TotalWatchTime
-
-		// Track views by user from sessions
-		for _, session := range media.ViewingSessions {
-			viewsByUser[session.PlexUsername]++
-		}
-
-		// Track deletions by month
-		monthKey := media.DeletedAt.Format("2006-01")
-		deletionsByMonth[monthKey]++
-	}
-
-	analysis.TotalViews = totalViews
-	analysis.TotalWatchTime = totalWatchTime
-	analysis.ViewsByUser = viewsByUser
-	analysis.DeletionsByMonth = deletionsByMonth
-
-	// Calculate most watched deleted content
-	if len(deletedMedia) > 0 {
-		// Sort by view count
-		mostWatched := deletedMedia[0]
-		for _, media := range deletedMedia[1:] {
-			if media.TotalViews > mostWatched.TotalViews {
-				mostWatched = media
-			}
-		}
-		analysis.MostWatchedDeleted = &DeletedMediaHighlight{
-			Title:          mostWatched.Title,
-			MediaType:      mostWatched.MediaType,
-			TotalViews:     mostWatched.TotalViews,
-			TotalWatchTime: mostWatched.TotalWatchTime,
-			DeletedAt:      mostWatched.DeletedAt,
-		}
-	}
-
-	return analysis, nil
 }
 
 // DeletedMediaAnalysis represents comprehensive analysis of deleted media.

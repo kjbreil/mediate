@@ -13,7 +13,7 @@ func (s *MediateServer) handleViewingHistoryResource(
 	ctx context.Context,
 	request mcp.ReadResourceRequest,
 ) ([]mcp.ResourceContents, error) {
-	s.logger.Info("Handling viewing history resource request")
+	s.logger.InfoContext(ctx, "Handling viewing history resource request")
 
 	shows := s.mediate.GetShows()
 	if shows == nil {
@@ -62,7 +62,7 @@ func (s *MediateServer) handleViewingHistoryResource(
 				MIMEType: "application/json",
 				Text:     `{"error": "Failed to marshal viewing history"}`,
 			},
-		}, nil
+		}, err
 	}
 
 	return []mcp.ResourceContents{
@@ -79,7 +79,7 @@ func (s *MediateServer) handleLibraryStatsResource(
 	ctx context.Context,
 	request mcp.ReadResourceRequest,
 ) ([]mcp.ResourceContents, error) {
-	s.logger.Info("Handling library stats resource request")
+	s.logger.InfoContext(ctx, "Handling library stats resource request")
 
 	shows := s.mediate.GetShows()
 	if shows == nil {
@@ -140,7 +140,7 @@ func (s *MediateServer) handleLibraryStatsResource(
 				MIMEType: "application/json",
 				Text:     `{"error": "Failed to marshal library statistics"}`,
 			},
-		}, nil
+		}, err
 	}
 
 	return []mcp.ResourceContents{
@@ -157,7 +157,7 @@ func (s *MediateServer) handleDownloadQueueResource(
 	ctx context.Context,
 	request mcp.ReadResourceRequest,
 ) ([]mcp.ResourceContents, error) {
-	s.logger.Info("Handling download queue resource request")
+	s.logger.InfoContext(ctx, "Handling download queue resource request")
 
 	shows := s.mediate.GetShows()
 	if shows == nil {
@@ -213,7 +213,7 @@ func (s *MediateServer) handleDownloadQueueResource(
 				MIMEType: "application/json",
 				Text:     `{"error": "Failed to marshal download queue"}`,
 			},
-		}, nil
+		}, err
 	}
 
 	return []mcp.ResourceContents{

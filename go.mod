@@ -31,6 +31,4 @@ require (
 	nhooyr.io/websocket v1.8.17 // indirect
 )
 
-replace github.com/jrudio/go-plex-client => /Users/kjell/dev/go-plex-client
-
 replace github.com/kjbreil/go-plex => /Users/kjell/dev/go-plex

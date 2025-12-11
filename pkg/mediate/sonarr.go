@@ -32,14 +32,14 @@ func (m *Mediate) loadShows() error {
 			}()
 			err = m.UpdateEpisodes(s)
 			if err != nil {
-				m.logger.Error(fmt.Sprintf("could not update episodes for %s", s.Title), "err", err.Error())
+				m.logger.Error("could not update episodes", "show", s.Title, "err", err.Error())
 				return
 			}
 		}(s)
 	}
 	wg.Wait()
 	m.UpdateDownloading()
-	m.logger.Info(fmt.Sprintln("loading shows took", time.Since(start)))
+	m.logger.Info("loading shows completed", "duration", time.Since(start))
 
 	return nil
 }
@@ -57,11 +57,13 @@ func (m *Mediate) UpdateDownloading() {
 		filesDownloading = append(filesDownloading, int(q.EpisodeID))
 	}
 
-	m.DB.MarkDownloading(m.DB.SonarrIds(filesDownloading...).TvdbIds()...)
+	m.DB.MarkDownloading(m.DB.SonarrIDs(filesDownloading...).TvdbIDs()...)
 }
 
 func (m *Mediate) UpdateEpisode(ep *shows.Episode) {
-	m.RefreshShow(m.DB.GetShow(ep.TvdbID))
+	if err := m.RefreshShow(m.DB.GetShow(ep.TvdbID)); err != nil {
+		m.logger.Error("Failed to refresh show", "error", err)
+	}
 	m.UpdateDownloading()
 }
 
@@ -70,7 +72,7 @@ func (m *Mediate) UpdateEpisodes(s *shows.Show) error {
 	defer close(buf)
 	wg := &sync.WaitGroup{}
 
-	episodes, err := m.sonarr.GetSeriesEpisodes(&sonarr.GetEpisode{SeriesID: s.SonarrId})
+	episodes, err := m.sonarr.GetSeriesEpisodes(&sonarr.GetEpisode{SeriesID: s.SonarrID})
 	if err != nil {
 		return err
 	}
@@ -112,6 +114,6 @@ func (m *Mediate) DownloadEpisodes(episodes shows.Episodes) {
 
 	_, _ = m.sonarr.SendCommand(&sonarr.CommandRequest{
 		Name:       "EpisodeSearch",
-		EpisodeIDs: episodes.SonarrIds(),
+		EpisodeIDs: episodes.SonarrIDs(),
 	})
 }

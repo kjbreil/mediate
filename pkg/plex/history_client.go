@@ -1,6 +1,7 @@
 package plex
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -33,10 +34,10 @@ func NewHistoryClient(baseURL, token string, logger *slog.Logger) *HistoryClient
 }
 
 // GetViewingHistory retrieves all viewing history from Plex.
-func (hc *HistoryClient) GetViewingHistory(start, size int) (*shows.PlexHistoryResponse, error) {
+func (hc *HistoryClient) GetViewingHistory(ctx context.Context, start, size int) (*shows.PlexHistoryResponse, error) {
 	url := fmt.Sprintf("%s/status/sessions/history/all", hc.baseURL)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -56,7 +57,7 @@ func (hc *HistoryClient) GetViewingHistory(start, size int) (*shows.PlexHistoryR
 	req.Header.Set("Accept", "application/xml")
 	req.Header.Set("X-Plex-Token", hc.token)
 
-	hc.logger.Debug("Fetching Plex viewing history", "url", req.URL.String())
+	hc.logger.DebugContext(ctx, "Fetching Plex viewing history", "url", req.URL.String())
 
 	resp, err := hc.client.Do(req)
 	if err != nil {
@@ -66,7 +67,7 @@ func (hc *HistoryClient) GetViewingHistory(start, size int) (*shows.PlexHistoryR
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Plex API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("plex API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -75,11 +76,12 @@ func (hc *HistoryClient) GetViewingHistory(start, size int) (*shows.PlexHistoryR
 	}
 
 	var historyResp shows.PlexHistoryResponse
-	if err := xml.Unmarshal(body, &historyResp); err != nil {
+	err = xml.Unmarshal(body, &historyResp)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse XML response: %w", err)
 	}
 
-	hc.logger.Info("Retrieved viewing history",
+	hc.logger.InfoContext(ctx, "Retrieved viewing history",
 		"total_records", historyResp.MediaContainer.Size,
 		"returned_records", len(historyResp.MediaContainer.Videos))
 
@@ -87,13 +89,13 @@ func (hc *HistoryClient) GetViewingHistory(start, size int) (*shows.PlexHistoryR
 }
 
 // GetAllViewingHistory retrieves all viewing history with pagination.
-func (hc *HistoryClient) GetAllViewingHistory() (*shows.PlexHistoryResponse, error) {
+func (hc *HistoryClient) GetAllViewingHistory(ctx context.Context) (*shows.PlexHistoryResponse, error) {
 	const batchSize = 100
 	var allVideos []shows.PlexHistoryVideo
 	start := 0
 
 	for {
-		resp, err := hc.GetViewingHistory(start, batchSize)
+		resp, err := hc.GetViewingHistory(ctx, start, batchSize)
 		if err != nil {
 			return nil, err
 		}
@@ -125,10 +127,10 @@ func (hc *HistoryClient) GetAllViewingHistory() (*shows.PlexHistoryResponse, err
 }
 
 // CheckMediaExists verifies if media with given rating key still exists in Plex.
-func (hc *HistoryClient) CheckMediaExists(ratingKey string) (bool, error) {
+func (hc *HistoryClient) CheckMediaExists(ctx context.Context, ratingKey string) (bool, error) {
 	url := fmt.Sprintf("%s/library/metadata/%s", hc.baseURL, ratingKey)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -157,10 +159,10 @@ func (hc *HistoryClient) CheckMediaExists(ratingKey string) (bool, error) {
 }
 
 // DetectOrphanedRecords identifies viewing history records for deleted media.
-func (hc *HistoryClient) DetectOrphanedRecords() ([]shows.PlexHistoryVideo, error) {
-	hc.logger.Info("Starting orphaned record detection")
+func (hc *HistoryClient) DetectOrphanedRecords(ctx context.Context) ([]shows.PlexHistoryVideo, error) {
+	hc.logger.InfoContext(ctx, "Starting orphaned record detection")
 
-	history, err := hc.GetAllViewingHistory()
+	history, err := hc.GetAllViewingHistory(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get viewing history: %w", err)
 	}
@@ -175,16 +177,18 @@ func (hc *HistoryClient) DetectOrphanedRecords() ([]shows.PlexHistoryVideo, erro
 		}
 		processedRatingKeys[video.RatingKey] = true
 
-		exists, err := hc.CheckMediaExists(video.RatingKey)
-		if err != nil {
-			hc.logger.Warn("Failed to check media existence",
+		var exists bool
+		var checkErr error
+		exists, checkErr = hc.CheckMediaExists(ctx, video.RatingKey)
+		if checkErr != nil {
+			hc.logger.WarnContext(ctx, "Failed to check media existence",
 				"rating_key", video.RatingKey,
-				"error", err)
+				"error", checkErr)
 			continue
 		}
 
 		if !exists {
-			hc.logger.Debug("Found orphaned record",
+			hc.logger.DebugContext(ctx, "Found orphaned record",
 				"rating_key", video.RatingKey,
 				"title", video.Title)
 
@@ -200,7 +204,7 @@ func (hc *HistoryClient) DetectOrphanedRecords() ([]shows.PlexHistoryVideo, erro
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	hc.logger.Info("Orphaned record detection complete",
+	hc.logger.InfoContext(ctx, "Orphaned record detection complete",
 		"total_checked", len(processedRatingKeys),
 		"orphaned_records", len(orphanedRecords))
 

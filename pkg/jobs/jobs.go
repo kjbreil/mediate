@@ -79,8 +79,15 @@ func (j *Jobs) DownloadJob() error {
 func (j *Jobs) DeleteJob() error {
 	j.logger.Info("Running delete job")
 
+	// Save original window duration and restore after
+
+	originalWindowDuration := shows.WindowDuration
+	defer func() {
+		shows.WindowDuration = originalWindowDuration //nolint:reassign // Restoring original value
+	}()
+
 	// Delete watched episodes that can be deleted (5 day window)
-	shows.WindowDuration = time.Minute * 24 * 5
+	shows.WindowDuration = time.Minute * 24 * 5 //nolint:reassign // Temporarily setting for finder function
 	watchedEpisodes := j.mediate.GetShows().Find(shows.Finders[shows.WatchedCanDelete])
 
 	if len(watchedEpisodes) > 0 {
@@ -92,7 +99,7 @@ func (j *Jobs) DeleteJob() error {
 	}
 
 	// Delete unwatched episodes that can be deleted (30 day window)
-	shows.WindowDuration = time.Minute * 24 * 30
+	shows.WindowDuration = time.Minute * 24 * 30 //nolint:reassign // Temporarily setting for finder function
 	unwatchedEpisodes := j.mediate.GetShows().Find(shows.Finders[shows.NotWatchedCanDelete])
 
 	if len(unwatchedEpisodes) > 0 {

@@ -2,10 +2,10 @@ package shows
 
 import "time"
 
-func (e Episodes) SonarrIds() []int64 {
+func (e Episodes) SonarrIDs() []int64 {
 	rtn := make([]int64, len(e))
 	for i, ep := range e {
-		rtn[i] = ep.SonarrId
+		rtn[i] = ep.SonarrID
 	}
 	return rtn
 }
@@ -76,14 +76,14 @@ type Episode struct {
 	ShowTvdbID    int
 
 	PlexRatingKey string
-	SonarrId      int64
+	SonarrID      int64
 	Watched       bool
 	Wanted        bool
 	HasFile       bool
 	DownloadedAt  time.Time
 	LastViewedAt  *time.Time
 	UpdatedAt     time.Time
-	SonarrFileId  int64
+	SonarrFileID  int64
 	AirDate       *time.Time
 	Downloading   bool
 	Duration      time.Duration

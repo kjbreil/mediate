@@ -6,73 +6,73 @@ import (
 
 // DeletedMedia represents media that was previously in Plex but has been deleted.
 type DeletedMedia struct {
-	ID uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey" json:"id"`
 
 	// Original Plex identifiers
-	RatingKey        string `gorm:"index;not null"` // Original Plex rating key
-	HistoryKey       string `gorm:"index"`          // Plex history key if available
-	LibrarySectionID int    `gorm:"index"`          // Original library section
+	RatingKey        string `gorm:"index;not null" json:"rating_key"`         // Original Plex rating key
+	HistoryKey       string `gorm:"index"          json:"history_key"`        // Plex history key if available
+	LibrarySectionID int    `gorm:"index"          json:"library_section_id"` // Original library section
 
 	// Media information (preserved from last known state)
-	Title     string `gorm:"not null"`
-	MediaType string `gorm:"not null"` // movie, show, episode, etc.
-	Year      int
-	Duration  time.Duration
-	Summary   string `gorm:"type:text"`
+	Title     string        `gorm:"not null"  json:"title"`
+	MediaType string        `gorm:"not null"  json:"media_type"` // movie, show, episode, etc.
+	Year      int           `                 json:"year"`
+	Duration  time.Duration `                 json:"duration"`
+	Summary   string        `gorm:"type:text" json:"summary"`
 
 	// For episodes/shows
-	ShowTitle     string // Parent show title for episodes
-	SeasonNumber  int    // Season number for episodes
-	EpisodeNumber int    // Episode number
-	TvdbID        int    `gorm:"index"` // TVDB ID if available
+	ShowTitle     string `json:"show_title"`                  // Parent show title for episodes
+	SeasonNumber  int    `json:"season_number"`               // Season number for episodes
+	EpisodeNumber int    `json:"episode_number"`              // Episode number
+	TvdbID        int    `json:"tvdb_id"        gorm:"index"` // TVDB ID if available
 
 	// Deletion tracking
-	LastSeenAt      time.Time `gorm:"not null"` // When it was last accessible
-	DeletedAt       time.Time `gorm:"not null"` // When deletion was detected
-	DetectionMethod string    `gorm:"not null"` // How deletion was detected
+	LastSeenAt      time.Time `gorm:"not null" json:"last_seen_at"`     // When it was last accessible
+	DeletedAt       time.Time `gorm:"not null" json:"deleted_at"`       // When deletion was detected
+	DetectionMethod string    `gorm:"not null" json:"detection_method"` // How deletion was detected
 
 	// Preserved viewing statistics
-	TotalViews     int `gorm:"default:0"`
-	TotalWatchTime time.Duration
-	LastViewedAt   *time.Time
-	FirstViewedAt  *time.Time
+	TotalViews     int           `gorm:"default:0" json:"total_views"`
+	TotalWatchTime time.Duration `                 json:"total_watch_time"`
+	LastViewedAt   *time.Time    `                 json:"last_viewed_at"`
+	FirstViewedAt  *time.Time    `                 json:"first_viewed_at"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Related viewing sessions
-	ViewingSessions []DeletedMediaSession `gorm:"foreignKey:DeletedMediaID"`
+	ViewingSessions []DeletedMediaSession `gorm:"foreignKey:DeletedMediaID" json:"viewing_sessions,omitempty"`
 }
 
 // DeletedMediaSession represents viewing sessions for deleted media.
 type DeletedMediaSession struct {
-	ID             uint          `gorm:"primaryKey"`
-	DeletedMediaID uint          `gorm:"index;not null"`
-	DeletedMedia   *DeletedMedia `gorm:"foreignKey:DeletedMediaID"`
+	ID             uint          `gorm:"primaryKey"                json:"id"`
+	DeletedMediaID uint          `gorm:"index;not null"            json:"deleted_media_id"`
+	DeletedMedia   *DeletedMedia `gorm:"foreignKey:DeletedMediaID" json:"deleted_media,omitempty"`
 
 	// Original session data
-	HistoryKey   string `gorm:"index"`
-	AccountID    int    `gorm:"index"`
-	PlexUsername string `gorm:"index"`
+	HistoryKey   string `gorm:"index" json:"history_key"`
+	AccountID    int    `gorm:"index" json:"account_id"`
+	PlexUsername string `gorm:"index" json:"plex_username"`
 
 	// Session details
-	ViewedAt        time.Time `gorm:"not null"`
-	Duration        time.Duration
-	ProgressPercent float64 `gorm:"default:0"`
-	Completed       bool    `gorm:"default:false"`
+	ViewedAt        time.Time     `gorm:"not null"      json:"viewed_at"`
+	Duration        time.Duration `                     json:"duration"`
+	ProgressPercent float64       `gorm:"default:0"     json:"progress_percent"`
+	Completed       bool          `gorm:"default:false" json:"completed"`
 
 	// Device information
-	DeviceType string
-	DeviceName string
-	Platform   string
-	Location   string // Remote/LAN
+	DeviceType string `json:"device_type"`
+	DeviceName string `json:"device_name"`
+	Platform   string `json:"platform"`
+	Location   string `json:"location"` // Remote/LAN
 
 	// Playback details
-	Paused  bool `gorm:"default:false"`
-	Stopped bool `gorm:"default:false"`
+	Paused  bool `gorm:"default:false" json:"paused"`
+	Stopped bool `gorm:"default:false" json:"stopped"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // DeletedMediaSummary provides aggregated statistics for deleted media.

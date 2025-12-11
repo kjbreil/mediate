@@ -2,6 +2,26 @@ package mcp
 
 import "time"
 
+// Constants for media types and sources.
+const (
+	mediaTypeMovie  = "movie"
+	mediaTypeMovies = "movies"
+	mediaTypeShow   = "show"
+	mediaTypeShows  = "shows"
+	mediaTypeBoth   = "both"
+
+	sourcePlex   = "plex"
+	sourceSonarr = "sonarr"
+	sourceRadarr = "radarr"
+	sourceAll    = "all"
+
+	timeframeWeek    = "week"
+	timeframeMonth   = "month"
+	timeframeQuarter = "quarter"
+	timeframeYear    = "year"
+	timeframeAll     = "all"
+)
+
 // ViewingAnalysis represents the result of viewing habits analysis.
 type ViewingAnalysis struct {
 	Timeframe    string                 `json:"timeframe"`

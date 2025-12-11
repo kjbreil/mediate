@@ -8,7 +8,7 @@ import (
 
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/mediate/pkg/shows"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // SQLite driver for database/sql
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -39,7 +39,7 @@ func InitDBWithPath(dbPath string) (*Store, error) {
 
 	// Create directory if it doesn't exist
 	dbDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dbDir, 0755); err != nil {
+	if err := os.MkdirAll(dbDir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
@@ -183,6 +183,7 @@ func (s *Store) GetDeletedMediaSummary() (*shows.DeletedMediaSummary, error) {
 	return &shows.DeletedMediaSummary{
 		TotalItems:      int(totalItems),
 		TotalViews:      int(totalViews),
+		TotalWatchTime:  0, // TODO: Calculate total watch time from deleted media
 		DeletedRecently: int(recentDeletions),
 		ByMediaType:     byMediaType,
 		ByLibrary:       byLibrary,

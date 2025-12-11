@@ -2,7 +2,7 @@ package shows
 
 type Episodes []*Episode
 
-func (e Episodes) TvdbIds() []int {
+func (e Episodes) TvdbIDs() []int {
 	rtn := make([]int, 0, len(e))
 	for _, ep := range e {
 		rtn = append(rtn, ep.TvdbID)
@@ -51,7 +51,7 @@ func (e Episodes) XEpisodesAheadDownloaded(x int, episode *Episode) bool {
 	return true
 }
 
-func (e Episodes) GetEpisodesXAhead(x int, episode *Episode) Episodes {
+func (e Episodes) GetEpisodesXAhead(_ int, _ *Episode) Episodes {
 	var episodes Episodes
 	// count := x
 	//

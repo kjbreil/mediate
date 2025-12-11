@@ -27,13 +27,13 @@ func RunAnalysis(cfg *cli.Config, m *mediate.Mediate, logger *slog.Logger) error
 }
 
 // runScanDeleted scans for deleted media.
-func runScanDeleted(m *mediate.Mediate, logger *slog.Logger) error {
+func runScanDeleted(m *mediate.Mediate, _ *slog.Logger) error {
 	fmt.Println("🔍 Scanning for deleted/orphaned media...")
 
 	// For now, use hardcoded config values since GetConfig() doesn't exist
 	// This should be replaced with actual config access
 	if m == nil {
-		return errors.New("Plex configuration not found. Please check config file")
+		return errors.New("plex configuration not found. Please check config file")
 	}
 
 	// TODO: Add proper config access to get Plex URL and token
@@ -316,47 +316,6 @@ func analyzeDeletedMedia(server *mcp.MediateServer) error {
 }
 
 // Helper functions for printing formatted data
-
-func printTopGenres(data map[string]interface{}) {
-	if sortedGenres, ok := data["sorted_genres"].([]interface{}); ok && len(sortedGenres) > 0 {
-		count := 5
-		if len(sortedGenres) < count {
-			count = len(sortedGenres)
-		}
-		for i := range count {
-			if genreMap, ok := sortedGenres[i].(map[string]interface{}); ok {
-				genre := genreMap["genre"].(string)
-				viewCount := genreMap["count"].(int)
-				fmt.Printf("    %d. %s: %d episodes\n", i+1, genre, viewCount)
-			}
-		}
-	}
-}
-
-func printTopShows(data map[string]interface{}) {
-	if topShows, ok := data["top_shows"].([]interface{}); ok && len(topShows) > 0 {
-		count := 5
-		if len(topShows) < count {
-			count = len(topShows)
-		}
-		for i := range count {
-			if showMap, ok := topShows[i].(map[string]interface{}); ok {
-				title := showMap["title"].(string)
-				watched := showMap["watched"].(int)
-				fmt.Printf("    %d. %s: %d episodes\n", i+1, title, watched)
-			}
-		}
-	}
-}
-
-func printViewingPatterns(data map[string]interface{}) {
-	if peakHour, ok := data["peak_hour"].(int); ok {
-		fmt.Printf("    Peak Hour: %d:00\n", peakHour)
-	}
-	if peakDay, ok := data["peak_day"].(string); ok {
-		fmt.Printf("    Peak Day: %s\n", peakDay)
-	}
-}
 
 // getSimpleGenres returns simplified genre mapping.
 func getSimpleGenres(title string) []string {

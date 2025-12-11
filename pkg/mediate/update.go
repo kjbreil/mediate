@@ -1,7 +1,6 @@
 package mediate
 
 import (
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -11,7 +10,9 @@ import (
 	"golift.io/starr/sonarr"
 )
 
-func (m *Mediate) MarkOnlyPilotUnwatched() (rtn []*shows.Episode, errors []error) {
+func (m *Mediate) MarkOnlyPilotUnwatched() ([]*shows.Episode, []error) {
+	var rtn []*shows.Episode
+	var errors []error
 	for _, show := range *m.DB.GetShows() {
 		if show.Ignore {
 			continue
@@ -37,141 +38,18 @@ func (m *Mediate) RecentlyWatched() shows.Episodes {
 // SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored.
 func (m *Mediate) SetMonitored() {
 	for _, show := range *m.DB.GetShows() {
-		if show.Ignore {
-			continue
-		}
-		if show.Title != "Workaholics" {
+		if show.Ignore || show.Title != "Workaholics" {
 			continue
 		}
 
-		err := m.RefreshShow(show)
-		if err != nil {
+		if err := m.RefreshShow(show); err != nil {
 			continue
 		}
 
-		// if the show is continuing and rating is above 5 then set future episodes to be downloaded
 		if show.Continuing {
-			if show.Rating >= 5 && show.Rating <= 8 {
-				var ser *sonarr.Series
-				ser, err = m.sonarr.GetSeriesByID(show.SonarrId)
-				if err != nil {
-					panic(err)
-				}
-
-				for _, sea := range ser.Seasons {
-					sea.Monitored = false
-				}
-
-				updateInput := &sonarr.AddSeriesInput{
-					ID:                ser.ID,
-					Title:             ser.Title,
-					TitleSlug:         ser.TitleSlug,
-					TvdbID:            ser.TvdbID,
-					ImdbID:            ser.ImdbID,
-					TvMazeID:          ser.TvMazeID,
-					TvRageID:          ser.TvRageID,
-					Path:              ser.Path,
-					QualityProfileID:  ser.QualityProfileID,
-					LanguageProfileID: ser.LanguageProfileID,
-					SeriesType:        ser.SeriesType,
-					Monitored:         ser.Monitored,
-					SeasonFolder:      ser.SeasonFolder,
-					UseSceneNumbering: ser.UseSceneNumbering,
-					Tags:              ser.Tags,
-					Seasons:           ser.Seasons,
-					Images:            ser.Images,
-				}
-				_, err = m.sonarr.UpdateSeries(updateInput, false)
-				if err != nil {
-					return
-				}
-				episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
-					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
-						return false
-					}
-					return true
-				})
-				err = m.MonitorEpisodes(episodes, false)
-				if err != nil {
-					return
-				}
-
-				episodes = m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
-					if s.SonarrId != show.SonarrId {
-						return false
-					}
-					if e.IsPilot() && !e.Wanted {
-						return true
-					}
-					if e.Wanted {
-						return false
-					}
-					if e.HasNotAired() {
-						return true
-					}
-					if e.PlexRatingKey == "" {
-						return false
-					}
-					if !e.Watched {
-						return true
-					}
-					return false
-				})
-				err = m.MonitorEpisodes(episodes, true)
-				if err != nil {
-					continue
-				}
-
-				err = m.RefreshShow(show)
-				if err != nil {
-					continue
-				}
-
-				episodes = show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
-				m.DownloadEpisodes(episodes)
-			}
-			if show.Rating < 5 {
-				var ser *sonarr.Series
-
-				ser, err = m.sonarr.GetSeriesByID(show.SonarrId)
-				if err != nil {
-					panic(err)
-				}
-
-				for _, sea := range ser.Seasons {
-					sea.Monitored = false
-				}
-				episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
-					if s.SonarrId != show.SonarrId || !e.Watched || e.IsPilot() || !e.Wanted {
-						return false
-					}
-					return true
-				})
-				err = m.MonitorEpisodes(episodes, false)
-				if err != nil {
-					continue
-				}
-			}
+			m.handleContinuingShow(show)
 		} else {
-			if show.Rating < 9 {
-				err = m.UnMonitorAll(show)
-				if err != nil {
-					continue
-				}
-				err = m.MonitorPilot(show)
-				if err != nil {
-					continue
-				}
-				episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
-				m.DownloadEpisodes(episodes)
-			}
-
-			if show.Rating >= 9 {
-				err = m.MonitorAll(show)
-				if err != nil {
-					continue
-				}
-			}
+			m.handleEndedShow(show)
 		}
 
 		episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
@@ -179,17 +57,131 @@ func (m *Mediate) SetMonitored() {
 	}
 }
 
+func (m *Mediate) handleContinuingShow(show *shows.Show) {
+	if show.Rating >= 5 && show.Rating <= 8 {
+		m.setupMediumRatedContinuingShow(show)
+		return
+	}
+
+	if show.Rating < 5 {
+		m.unmonitorLowRatedShow(show)
+	}
+}
+
+func (m *Mediate) handleEndedShow(show *shows.Show) {
+	if show.Rating < 9 {
+		if err := m.UnMonitorAll(show); err != nil {
+			return
+		}
+		if err := m.MonitorPilot(show); err != nil {
+			return
+		}
+		episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
+		m.DownloadEpisodes(episodes)
+		return
+	}
+
+	if show.Rating >= 9 {
+		_ = m.MonitorAll(show)
+	}
+}
+
+func (m *Mediate) setupMediumRatedContinuingShow(show *shows.Show) {
+	ser, err := m.sonarr.GetSeriesByID(show.SonarrID)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, sea := range ser.Seasons {
+		sea.Monitored = false
+	}
+
+	updateInput := &sonarr.AddSeriesInput{
+		ID:                ser.ID,
+		Title:             ser.Title,
+		TitleSlug:         ser.TitleSlug,
+		TvdbID:            ser.TvdbID,
+		ImdbID:            ser.ImdbID,
+		TvMazeID:          ser.TvMazeID,
+		TvRageID:          ser.TvRageID,
+		Path:              ser.Path,
+		QualityProfileID:  ser.QualityProfileID,
+		LanguageProfileID: ser.LanguageProfileID,
+		SeriesType:        ser.SeriesType,
+		Monitored:         ser.Monitored,
+		SeasonFolder:      ser.SeasonFolder,
+		UseSceneNumbering: ser.UseSceneNumbering,
+		Tags:              ser.Tags,
+		Seasons:           ser.Seasons,
+		Images:            ser.Images,
+	}
+
+	if _, err = m.sonarr.UpdateSeries(updateInput, false); err != nil {
+		return
+	}
+
+	m.unmonitorWatchedEpisodes(show)
+	m.monitorUnwatchedEpisodes(show)
+
+	if err = m.RefreshShow(show); err != nil {
+		return
+	}
+
+	episodes := show.GetEpisodes().Wanted(true).HasFile(false).Aired(true)
+	m.DownloadEpisodes(episodes)
+}
+
+func (m *Mediate) unmonitorLowRatedShow(show *shows.Show) {
+	ser, err := m.sonarr.GetSeriesByID(show.SonarrID)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, sea := range ser.Seasons {
+		sea.Monitored = false
+	}
+
+	episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
+		return s.SonarrID == show.SonarrID && e.Watched && !e.IsPilot() && e.Wanted
+	})
+
+	_ = m.MonitorEpisodes(episodes, false)
+}
+
+func (m *Mediate) unmonitorWatchedEpisodes(show *shows.Show) {
+	episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
+		return s.SonarrID == show.SonarrID && e.Watched && !e.IsPilot() && e.Wanted
+	})
+	_ = m.MonitorEpisodes(episodes, false)
+}
+
+func (m *Mediate) monitorUnwatchedEpisodes(show *shows.Show) {
+	episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
+		if s.SonarrID != show.SonarrID {
+			return false
+		}
+		if e.IsPilot() && !e.Wanted {
+			return true
+		}
+		if e.Wanted || e.PlexRatingKey == "" {
+			return false
+		}
+		return e.HasNotAired() || !e.Watched
+	})
+	_ = m.MonitorEpisodes(episodes, true)
+}
+
 func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
-	m.logger.Info(fmt.Sprintf("Deleting %d episodes", len(episodes)))
+	m.logger.Info("Deleting episodes", "count", len(episodes))
 	var toDelete []int64
 
 	for _, ep := range episodes {
 		if ep.Wanted {
-			toDelete = append(toDelete, ep.SonarrId)
+			toDelete = append(toDelete, ep.SonarrID)
 			m.logger.Info(
 				"Marking episode as unmonitored",
 				"sonarrId",
-				ep.SonarrId,
+				ep.SonarrID,
 				"season",
 				ep.Season,
 				"episode",
@@ -199,8 +191,9 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 	}
 
 	if len(toDelete) > 0 {
-		m.logger.Info(fmt.Sprintf("Unmonitoring %d episodes in Sonarr", len(toDelete)))
-		_, err := m.sonarr.MonitorEpisode(toDelete, false)
+		m.logger.Info("Unmonitoring episodes in Sonarr", "count", len(toDelete))
+		var err error
+		_, err = m.sonarr.MonitorEpisode(toDelete, false)
 		if err != nil {
 			m.logger.Error("Failed to unmonitor episodes", "err", err.Error())
 			return err
@@ -212,15 +205,15 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 			m.logger.Info(
 				"Deleting episode file",
 				"sonarrFileId",
-				ep.SonarrFileId,
+				ep.SonarrFileID,
 				"season",
 				ep.Season,
 				"episode",
 				ep.Episode,
 			)
-			err := m.sonarr.DeleteEpisodeFile(ep.SonarrFileId)
+			var err = m.sonarr.DeleteEpisodeFile(ep.SonarrFileID)
 			if err != nil {
-				m.logger.Error("Failed to delete episode file", "sonarrFileId", ep.SonarrFileId, "err", err.Error())
+				m.logger.Error("Failed to delete episode file", "sonarrFileId", ep.SonarrFileID, "err", err.Error())
 				return err
 			}
 		}
@@ -230,7 +223,7 @@ func (m *Mediate) DeleteEpisodes(episodes []*shows.Episode) error {
 }
 
 func (m *Mediate) MonitorEpisodes(episodes shows.Episodes, toMonitor bool) error {
-	_, err := m.sonarr.MonitorEpisode(episodes.SonarrIds(), toMonitor)
+	_, err := m.sonarr.MonitorEpisode(episodes.SonarrIDs(), toMonitor)
 	return err
 }
 
@@ -240,7 +233,8 @@ func (m *Mediate) UnMonitorAll(show *shows.Show) error {
 	if err != nil {
 		return err
 	}
-	ser, err := m.sonarr.GetSeriesByID(show.SonarrId)
+	var ser *sonarr.Series
+	ser, err = m.sonarr.GetSeriesByID(show.SonarrID)
 	ser.Monitored = true
 	if err != nil {
 		panic(err)
@@ -284,7 +278,8 @@ func (m *Mediate) MonitorAll(show *shows.Show) error {
 		return err
 	}
 
-	ser, err := m.sonarr.GetSeriesByID(show.SonarrId)
+	var ser *sonarr.Series
+	ser, err = m.sonarr.GetSeriesByID(show.SonarrID)
 	if err != nil {
 		return err
 	}
@@ -322,7 +317,7 @@ func (m *Mediate) MonitorAll(show *shows.Show) error {
 
 func (m *Mediate) MonitorPilot(show *shows.Show) error {
 	episodes := m.GetShows().Find(func(s *shows.Show, e *shows.Episode) bool {
-		if s.SonarrId != show.SonarrId {
+		if s.SonarrID != show.SonarrID {
 			return false
 		}
 		if e.IsPilot() && !e.Wanted {
@@ -340,7 +335,8 @@ func (m *Mediate) MonitorPilot(show *shows.Show) error {
 
 func (m *Mediate) DeleteMovies(moviesList []*movies.Movie) error {
 	for _, mov := range moviesList {
-		err := m.radarr.DeleteMovie(mov.RadarrID, true, false)
+		var err error
+		err = m.radarr.DeleteMovie(mov.RadarrID, true, false)
 		if err != nil {
 			return err
 		}
@@ -356,8 +352,4 @@ func (m *Mediate) DeleteMovies(moviesList []*movies.Movie) error {
 	}
 
 	return nil
-}
-
-func (m *Mediate) refreshPlexLibraries() {
-	// m.plex
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/kjbreil/go-plex/library"
 	"github.com/kjbreil/go-plex/plex"
-	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
@@ -21,7 +20,6 @@ type PlexPlaying struct {
 	changed time.Time
 	episode *shows.Episode
 	viewed  time.Duration
-	movie   *movies.Movie
 	m       sync.Mutex
 	Changed bool
 }
@@ -46,7 +44,9 @@ func (m *Mediate) RefreshShowsEpisodes(episodes shows.Episodes) {
 		}
 	}
 	for _, s := range shows {
-		m.RefreshShow(s)
+		if err := m.RefreshShow(s); err != nil {
+			m.logger.Error("Failed to refresh show", "title", s.Title, "error", err)
+		}
 	}
 }
 func (m *Mediate) RefreshShow(s *shows.Show) error {
@@ -70,7 +70,10 @@ func (m *Mediate) RefreshShow(s *shows.Show) error {
 	}
 	episodes := m.DB.GetEpisodes(s.TvdbID).HasFile(true).InPlex(false)
 	if len(episodes) > 0 {
-		m.plex.ScanLibrary(s.Library)
+		var scanErr = m.plex.ScanLibrary(s.Library)
+		if scanErr != nil {
+			m.logger.Error("Failed to scan library", "library", s.Library, "error", scanErr)
+		}
 	}
 	m.logger.Info("Finished refreshing show", "title", s.Title)
 	return nil
@@ -145,51 +148,43 @@ func (m *Mediate) OnPlexPlaying(f func(pp *PlexPlaying)) {
 
 func (m *Mediate) loadPlexShows(lib *library.Library) error {
 	for _, show := range *m.DB.GetShows() {
-		plexShow, _, _ := lib.Shows.FindTvdbID(show.TvdbID)
-		if plexShow == nil {
-			continue
-		}
-
-		show.PlexRatingKey = plexShow.RatingKey
-		show.Rating = plexShow.UserRating
-		show.Library = lib
-		show.Ignore = m.config.Plex.Ignore(show.LibraryTitle())
-		show.LibraryUUID = lib.UUID
-
-		var ss = *show
-		ss.Episodes = nil
-		m.DB.Save(ss)
-
-		for _, episode := range show.Episodes {
-			_, _, plexEpisode := lib.Shows.FindTvdbID(episode.TvdbID)
-			if plexEpisode != nil {
-				episode.PlexRatingKey = plexEpisode.RatingKey
-				episode.Watched = plexEpisode.Watched
-				episode.LastViewedAt = plexEpisode.LastViewedAt
-				episode.UpdatedAt = plexEpisode.UpdatedAt
-				episode.Duration = time.Millisecond * time.Duration(plexEpisode.Duration)
-				m.DB.Save(episode)
-			}
-		}
+		m.loadPlexShow(lib, show)
 	}
 
 	return nil
 }
 
-func (m *Mediate) loadPlexMovies(lib *library.Library) error {
-	for _, movie := range m.Movies {
-		plexMovie := lib.Movies.FindTMDB(movie.TmdbID)
-		if plexMovie == nil {
-			continue
-		}
-		movie.PlexRatingKey = plexMovie.RatingKey
-		movie.Rating = plexMovie.UserRating
-		movie.Library = lib.Title
-		movie.Ignore = m.config.Plex.Ignore(movie.Library)
-		movie.Watched = plexMovie.Watched
-		movie.LastViewedAt = plexMovie.LastViewedAt
-		movie.UpdatedAt = plexMovie.UpdatedAt
+func (m *Mediate) loadPlexShow(lib *library.Library, show *shows.Show) {
+	plexShow, _, _ := lib.Shows.FindTvdbID(show.TvdbID)
+	if plexShow == nil {
+		return
 	}
 
-	return nil
+	show.PlexRatingKey = plexShow.RatingKey
+	show.Rating = plexShow.UserRating
+	show.Library = lib
+	show.Ignore = m.config.Plex.Ignore(show.LibraryTitle())
+	show.LibraryUUID = lib.UUID
+
+	var ss = *show
+	ss.Episodes = nil
+	m.DB.Save(ss)
+
+	m.loadPlexEpisodes(lib, show)
+}
+
+func (m *Mediate) loadPlexEpisodes(lib *library.Library, show *shows.Show) {
+	for _, episode := range show.Episodes {
+		_, _, plexEpisode := lib.Shows.FindTvdbID(episode.TvdbID)
+		if plexEpisode == nil {
+			continue
+		}
+
+		episode.PlexRatingKey = plexEpisode.RatingKey
+		episode.Watched = plexEpisode.Watched
+		episode.LastViewedAt = plexEpisode.LastViewedAt
+		episode.UpdatedAt = plexEpisode.UpdatedAt
+		episode.Duration = time.Millisecond * time.Duration(plexEpisode.Duration)
+		m.DB.Save(episode)
+	}
 }

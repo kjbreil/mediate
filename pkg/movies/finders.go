@@ -4,9 +4,10 @@ import "time"
 
 type FindFunc func(movie *Movie) bool
 
+//nolint:gochecknoglobals // Configuration variables used across finders
 var (
-	WindowDuration time.Duration = time.Hour * 24 * 30
-	MaxMovieRating float64       = 3
+	WindowDuration = time.Hour * 24 * 30
+	MaxMovieRating = 3.0
 )
 
 type FinderKey int
@@ -18,29 +19,27 @@ const (
 	DownloadedNotWanted
 )
 
-var Finders map[FinderKey]FindFunc
-
-func init() {
-	Finders = map[FinderKey]FindFunc{
-		WatchedCanDelete: func(movie *Movie) bool {
-			return movie.Watched &&
-				movie.WatchedOutside(WindowDuration) &&
-				movie.Rating <= MaxMovieRating &&
-				!movie.AddedWithin(WindowDuration)
-		},
-		DownloadedAfterWatched: func(movie *Movie) bool {
-			return movie.HasFile && movie.Watched && movie.WatchedBeforeDownload() && movie.Rating <= MaxMovieRating
-		},
-		MissingFromPlex: func(movie *Movie) bool {
-			return movie.PlexRatingKey == "" && movie.HasFile
-		},
-		DownloadedNotWanted: func(movie *Movie) bool {
-			return movie.HasFile && !movie.Wanted
-		},
-	}
+//nolint:gochecknoglobals // Registry pattern for finder functions
+var Finders = map[FinderKey]FindFunc{
+	WatchedCanDelete: func(movie *Movie) bool {
+		return movie.Watched &&
+			movie.WatchedOutside(WindowDuration) &&
+			movie.Rating <= MaxMovieRating &&
+			!movie.AddedWithin(WindowDuration)
+	},
+	DownloadedAfterWatched: func(movie *Movie) bool {
+		return movie.HasFile && movie.Watched && movie.WatchedBeforeDownload() && movie.Rating <= MaxMovieRating
+	},
+	MissingFromPlex: func(movie *Movie) bool {
+		return movie.PlexRatingKey == "" && movie.HasFile
+	},
+	DownloadedNotWanted: func(movie *Movie) bool {
+		return movie.HasFile && !movie.Wanted
+	},
 }
 
-func (m Movies) Find(fn FindFunc) (rtn []*Movie) {
+func (m Movies) Find(fn FindFunc) []*Movie {
+	rtn := make([]*Movie, 0)
 	for _, movie := range m {
 		if movie.Ignore {
 			continue

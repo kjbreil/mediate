@@ -38,7 +38,7 @@ func NewMediateServer(m *mediate.Mediate, logger *slog.Logger) *MediateServer {
 	return srv
 }
 
-// registerTools registers all MCP tools.
+//nolint:funlen // registerTools function defines all MCP tool schemas and handlers declaratively
 func (s *MediateServer) registerTools() {
 	// Viewing habits analysis tool
 	s.server.AddTool(mcp.Tool{
@@ -302,7 +302,7 @@ func (s *MediateServer) registerResources() {
 
 // Start starts the MCP server with stdio transport.
 func (s *MediateServer) Start(ctx context.Context) error {
-	s.logger.Info("Starting Mediate MCP server")
+	s.logger.InfoContext(ctx, "Starting Mediate MCP server")
 
 	// Start with stdio transport (for Claude Desktop integration)
 	return server.ServeStdio(s.server)

@@ -1,7 +1,6 @@
 package mediate
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/kjbreil/mediate/pkg/config"
@@ -9,6 +8,9 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	// Create a temporary database file for testing
+	tempDB := t.TempDir() + "/test.db"
+
 	c := config.Config{
 		Plex: config.Plex{
 			URL:   "http://plex1.kaygel.io:32400",
@@ -19,12 +21,15 @@ func TestNew(t *testing.T) {
 			},
 		},
 		Sonarr: config.Sonarr{
-			ApiKey: "67bd04cc551149188947a0024a7f5c1e",
+			APIKey: "67bd04cc551149188947a0024a7f5c1e",
 			URL:    "http://10.0.1.22:8989/show/",
 		},
 		Radarr: config.Radarr{
-			ApiKey: "e2eab479a088404387c7b1b48eab5287",
+			APIKey: "e2eab479a088404387c7b1b48eab5287",
 			URL:    "http://10.0.1.22:7878/film/",
+		},
+		Database: config.Database{
+			Path: tempDB,
 		},
 	}
 
@@ -35,7 +40,7 @@ func TestNew(t *testing.T) {
 
 	moviesList := m.Movies.Find(movies.Finders[movies.DownloadedNotWanted])
 	for _, e := range moviesList {
-		fmt.Printf("Title: %s\n", e.Title)
+		t.Logf("Title: %s", e.Title)
 	}
 	// err = m.DeleteMovies(moviesList)
 	// if err != nil {

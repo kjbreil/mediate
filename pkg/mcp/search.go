@@ -34,24 +34,7 @@ func (s *MediateServer) searchMedia(query string, mediaType string, source strin
 		results.Results = append(results.Results, radarrResults...)
 		results.Sources = append(results.Sources, "radarr")
 	case "all":
-		// Search all sources
-		if mediaType == "shows" || mediaType == "both" {
-			plexResults := s.searchPlex(query, "shows")
-			sonarrResults := s.searchSonarr(query, "shows")
-			results.Results = append(results.Results, plexResults...)
-			results.Results = append(results.Results, sonarrResults...)
-			results.Sources = append(results.Sources, "plex", "sonarr")
-		}
-		if mediaType == "movies" || mediaType == "both" {
-			plexMovies := s.searchPlex(query, "movies")
-			radarrResults := s.searchRadarr(query, "movies")
-			results.Results = append(results.Results, plexMovies...)
-			results.Results = append(results.Results, radarrResults...)
-			if !contains(results.Sources, "plex") {
-				results.Sources = append(results.Sources, "plex")
-			}
-			results.Sources = append(results.Sources, "radarr")
-		}
+		s.searchAllSources(query, mediaType, results)
 	}
 
 	results.TotalCount = len(results.Results)
@@ -63,6 +46,31 @@ func (s *MediateServer) searchMedia(query string, mediaType string, source strin
 		"duration", results.SearchTime)
 
 	return results
+}
+
+// searchAllSources searches all available sources based on media type.
+func (s *MediateServer) searchAllSources(query string, mediaType string, results *SearchResults) {
+	shouldSearchShows := mediaType == mediaTypeShows || mediaType == mediaTypeBoth
+	shouldSearchMovies := mediaType == mediaTypeMovies || mediaType == mediaTypeBoth
+
+	if shouldSearchShows {
+		plexResults := s.searchPlex(query, "shows")
+		sonarrResults := s.searchSonarr(query, "shows")
+		results.Results = append(results.Results, plexResults...)
+		results.Results = append(results.Results, sonarrResults...)
+		results.Sources = append(results.Sources, "plex", "sonarr")
+	}
+
+	if shouldSearchMovies {
+		plexMovies := s.searchPlex(query, "movies")
+		radarrResults := s.searchRadarr(query, "movies")
+		results.Results = append(results.Results, plexMovies...)
+		results.Results = append(results.Results, radarrResults...)
+		if !contains(results.Sources, "plex") {
+			results.Sources = append(results.Sources, "plex")
+		}
+		results.Sources = append(results.Sources, "radarr")
+	}
 }
 
 // searchPlex searches the Plex library.
@@ -81,11 +89,11 @@ func (s *MediateServer) searchPlex(query string, mediaType string) []*SearchResu
 
 		// Simple string matching - in production, you'd use more sophisticated search
 		if strings.Contains(titleLower, queryLower) {
-			if mediaType == "shows" || mediaType == "both" {
+			if mediaType == mediaTypeShows || mediaType == mediaTypeBoth {
 				result := &SearchResult{
 					Title:     show.Title,
-					Type:      "show",
-					Source:    "plex",
+					Type:      mediaTypeShow,
+					Source:    sourcePlex,
 					TvdbID:    show.TvdbID,
 					Available: true,
 					Monitored: s.isShowMonitored(show),
@@ -103,7 +111,7 @@ func (s *MediateServer) searchPlex(query string, mediaType string) []*SearchResu
 func (s *MediateServer) searchSonarr(query string, mediaType string) []*SearchResult {
 	results := make([]*SearchResult, 0)
 
-	if mediaType != "shows" && mediaType != "both" {
+	if mediaType != mediaTypeShows && mediaType != mediaTypeBoth {
 		return results
 	}
 
@@ -112,8 +120,8 @@ func (s *MediateServer) searchSonarr(query string, mediaType string) []*SearchRe
 	sampleResults := []*SearchResult{
 		{
 			Title:       "Breaking Bad",
-			Type:        "show",
-			Source:      "sonarr",
+			Type:        mediaTypeShow,
+			Source:      sourceSonarr,
 			TvdbID:      81189,
 			Year:        2008,
 			Genre:       []string{"Drama", "Crime"},
@@ -221,11 +229,12 @@ func (s *MediateServer) addToDownloads(items []*DownloadItem, qualityProfile str
 	successCount := len(response.Success)
 	failedCount := len(response.Failed)
 
-	if failedCount == 0 {
+	switch {
+	case failedCount == 0:
 		response.Message = fmt.Sprintf("Successfully added %d item(s) to downloads", successCount)
-	} else if successCount == 0 {
+	case successCount == 0:
 		response.Message = fmt.Sprintf("Failed to add all %d item(s) to downloads", failedCount)
-	} else {
+	default:
 		response.Message = fmt.Sprintf("Added %d item(s) successfully, %d failed", successCount, failedCount)
 	}
 
@@ -259,7 +268,7 @@ func (s *MediateServer) addToSonarr(item *DownloadItem, qualityProfile string) b
 }
 
 // addShowByTvdbID adds a show to Sonarr using TVDB ID.
-func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, qualityProfile string) bool {
+func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, _ string) bool {
 	// Check if show already exists in our database
 	existingShow := s.mediate.DB.GetShow(tvdbID)
 	if existingShow != nil {
@@ -287,7 +296,7 @@ func (s *MediateServer) addShowByTvdbID(tvdbID int, monitor bool, qualityProfile
 }
 
 // addShowByTitle adds a show to Sonarr using title search.
-func (s *MediateServer) addShowByTitle(title string, monitor bool, qualityProfile string) bool {
+func (s *MediateServer) addShowByTitle(title string, _ bool, _ string) bool {
 	s.logger.Info("Searching for show by title", "title", title)
 
 	// This would search Sonarr's lookup API by title
@@ -298,13 +307,13 @@ func (s *MediateServer) addShowByTitle(title string, monitor bool, qualityProfil
 
 // triggerShowSearch triggers a search for a show's monitored episodes.
 func (s *MediateServer) triggerShowSearch(show *shows.Show) {
-	s.logger.Info("Triggering search for show", "title", show.Title, "sonarr_id", show.SonarrId)
+	s.logger.Info("Triggering search for show", "title", show.Title, "sonarr_id", show.SonarrID)
 
 	// Get monitored episodes for this show
 	monitoredEpisodes := make([]int64, 0)
 	for _, episode := range show.Episodes {
 		if episode.Wanted && !episode.HasFile {
-			monitoredEpisodes = append(monitoredEpisodes, episode.SonarrId)
+			monitoredEpisodes = append(monitoredEpisodes, episode.SonarrID)
 		}
 	}
 
@@ -325,7 +334,7 @@ func (s *MediateServer) triggerShowSearch(show *shows.Show) {
 }
 
 // addToRadarr adds a movie to Radarr.
-func (s *MediateServer) addToRadarr(item *DownloadItem, qualityProfile string) bool {
+func (s *MediateServer) addToRadarr(item *DownloadItem, _ string) bool {
 	s.logger.Info("Adding movie to Radarr", "title", item.Title)
 
 	// In a real implementation, you'd:

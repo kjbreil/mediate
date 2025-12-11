@@ -30,7 +30,7 @@ type Mediate struct {
 	DB     *store.Store
 }
 
-func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
+func New(c config.Config, _ ...Options) (*Mediate, error) {
 	var err error
 	m := Mediate{
 		plex:   nil,
@@ -56,10 +56,10 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		return nil, err
 	}
 
-	sonarrConfig := starr.New(c.Sonarr.ApiKey, c.Sonarr.URL, 0)
+	sonarrConfig := starr.New(c.Sonarr.APIKey, c.Sonarr.URL, 0)
 	m.sonarr = sonarr.New(sonarrConfig)
 
-	radarrConfig := starr.New(c.Radarr.ApiKey, c.Radarr.URL, 0)
+	radarrConfig := starr.New(c.Radarr.APIKey, c.Radarr.URL, 0)
 	m.radarr = radarr.New(radarrConfig)
 
 	err = m.plex.InitLibraries()
@@ -76,7 +76,7 @@ func New(c config.Config, options ...MediateOptions) (*Mediate, error) {
 
 // NewForMCP creates a new Mediate instance with fast initialization for MCP mode
 // Heavy data loading is deferred to background goroutines.
-func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
+func NewForMCP(c config.Config, options ...Options) (*Mediate, error) {
 	m, err := New(c, options...)
 	if err != nil {
 		return nil, err
@@ -87,9 +87,11 @@ func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		m.logger.Info("Starting background data loading for MCP mode")
 
 		// Load shows data
+		var loadErr error
 		start := time.Now()
-		if err := m.loadShows(); err != nil {
-			m.logger.Error("Failed to load shows", "error", err)
+		loadErr = m.loadShows()
+		if loadErr != nil {
+			m.logger.Error("Failed to load shows", "error", loadErr)
 		} else {
 			m.logger.Info("Background shows loading completed", "duration", time.Since(start))
 		}
@@ -100,13 +102,15 @@ func NewForMCP(c config.Config, options ...MediateOptions) (*Mediate, error) {
 		m.logger.Info("Background plex library refresh completed", "duration", time.Since(start))
 
 		// Load Plex data
-		if err := m.loadPlex(); err != nil {
-			m.logger.Error("Failed to load plex data", "error", err)
+		loadErr = m.loadPlex()
+		if loadErr != nil {
+			m.logger.Error("Failed to load plex data", "error", loadErr)
 		}
 
 		// Load movies
-		if err := m.loadMovies(); err != nil {
-			m.logger.Error("Failed to load movies", "error", err)
+		loadErr = m.loadMovies()
+		if loadErr != nil {
+			m.logger.Error("Failed to load movies", "error", loadErr)
 		}
 
 		m.logger.Info("Background data loading completed")

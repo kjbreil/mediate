@@ -254,6 +254,59 @@ linters:
         - ^golang.org/x/tools/go/analysis.Analyzer$
         - ^google.golang.org/protobuf/.+Options$
         - ^gopkg.in/yaml.v3.Node$
+        - ^github.com/mark3labs/mcp-go/mcp.Tool$
+        - ^github.com/mark3labs/mcp-go/mcp.ToolInputSchema$
+        - ^github.com/mark3labs/mcp-go/mcp.Resource$
+        - ^github.com/mark3labs/mcp-go/mcp.CallToolResult$
+        - ^github.com/mark3labs/mcp-go/mcp.TextResourceContents$
+        - ^gorm.io/gorm.Config$
+        - ^log/slog.HandlerOptions$
+        - ^golift.io/starr/sonarr.CommandRequest$
+        - ^golift.io/starr/sonarr.GetEpisode$
+        - ^golift.io/starr/sonarr.AddSeriesInput$
+        - ^golift.io/starr/radarr.GetMovie$
+        - ^golift.io/starr/radarr.AddMovieInput$
+        # project-specific structs (DTOs and response types that intentionally use partial initialization)
+        - ^github.com/kjbreil/mediate/pkg/cli.Config$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ShowAnalysis$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ShowInfo$
+        - ^github.com/kjbreil/mediate/pkg/mcp.UserShowStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.EpisodeAnalysis$
+        - ^github.com/kjbreil/mediate/pkg/mcp.EpisodeStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.UserEpisodeStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.EpisodeSummary$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ShowStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.SeasonStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ViewingTrends$
+        - ^github.com/kjbreil/mediate/pkg/mcp.DeletedMediaAnalysis$
+        - ^github.com/kjbreil/mediate/pkg/mcp.DeletedMediaTypeStats$
+        - ^github.com/kjbreil/mediate/pkg/mcp.DeletedMediaImpact$
+        - ^github.com/kjbreil/mediate/pkg/mcp.TextResourceContents$
+        - ^github.com/kjbreil/mediate/pkg/mcp.SearchResult$
+        - ^github.com/kjbreil/mediate/pkg/mcp.DownloadResponse$
+        - ^github.com/kjbreil/mediate/pkg/mcp.SystemStatus$
+        - ^github.com/kjbreil/mediate/pkg/mcp.DatabaseStatus$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ServiceStatus$
+        - ^github.com/kjbreil/mediate/pkg/mcp.JobStatus$
+        - ^github.com/kjbreil/mediate/pkg/mcp.MediateServer$
+        - ^github.com/kjbreil/mediate/pkg/mcp.Tool$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ToolInputSchema$
+        - ^github.com/kjbreil/mediate/pkg/shows.ViewingSession$
+        - ^github.com/kjbreil/mediate/pkg/shows.PlexHistoryContainer$
+        - ^github.com/kjbreil/mediate/pkg/shows.DeletedMediaItem$
+        - ^github.com/kjbreil/mediate/pkg/mcp.ViewingAnalysis$
+        - ^github.com/kjbreil/mediate/pkg/mediate.Mediate$
+        - ^github.com/kjbreil/mediate/pkg/mediate.PlexPlaying$
+        - ^github.com/kjbreil/mediate/pkg/movies.Movie$
+        - ^github.com/kjbreil/mediate/pkg/service.Service$
+        - ^github.com/kjbreil/mediate/pkg/service.Job$
+        - ^github.com/kjbreil/mediate/pkg/shows.Show$
+        - ^github.com/kjbreil/mediate/pkg/shows.Episode$
+        - ^github.com/kjbreil/mediate/pkg/shows.DeletedMedia$
+        - ^github.com/kjbreil/mediate/pkg/shows.DeletedMediaSession$
+        - ^github.com/kjbreil/mediate/pkg/shows.DeletedMediaSummary$
+        - ^github.com/kjbreil/mediate/pkg/shows.UserStats$
+        - ^github.com/kjbreil/mediate/pkg/store.Store$
 
     funcorder:
       # Checks if the exported methods of a structure are placed before the non-exported ones.
@@ -279,6 +332,13 @@ linters:
       # Minimal code complexity to report.
       # Default: 30 (but we recommend 10-20)
       min-complexity: 20
+
+    gomoddirectives:
+      # List of allowed `replace` directives.
+      # Default: []
+      replace-allow-list:
+        - github.com/jrudio/go-plex-client
+        - github.com/kjbreil/go-plex
 
     gocritic:
       # Settings passed to gocritic.
@@ -334,6 +394,65 @@ linters:
         - os.WriteFile
         - prometheus.ExponentialBuckets.*
         - prometheus.LinearBuckets
+        - time.*
+        - strings.SplitN
+        - strconv.*
+      # List of numbers to exclude from analysis.
+      # The values may be int, float, or string.
+      # Default: []
+      ignored-numbers:
+        - '0'
+        - '1'
+        - '2'
+        - '3'
+        - '4'
+        - '5'
+        - '6'
+        - '7'
+        - '8'
+        - '9'
+        - '10'
+        - '12'
+        - '15'
+        - '16'
+        - '20'
+        - '24'
+        - '30'
+        - '32'
+        - '50'
+        - '60'
+        - '64'
+        - '90'
+        - '100'
+        - '200'
+        - '256'
+        - '365'
+        - '400'
+        - '404'
+        - '500'
+        - '1000'
+        - '1024'
+        - '2048'
+        - '4096'
+        - '8080'
+        - '10000'
+        - '0.1'
+        - '0.5'
+        - '0.85'
+        - '0.88'
+        - '0.89'
+        - '0.92'
+        - '0.94'
+        - '0.95'
+        - '2002'
+        - '2008'
+        - '2010'
+        - '2015'
+        - '2017'
+        - '2018'
+        - '2022'
+        - '81189'
+        - '273181'
 
     nakedret:
       # Make an issue if func has more lines of code than this setting, and it has naked returns.
@@ -431,6 +550,9 @@ linters:
       - text: 'comment on exported \S+ \S+ should be of the form ".+"'
         source: '// ?(nolint|TODO)'
         linters: [ revive, staticcheck ]
+      - path: 'go\.mod'
+        text: 'replacement are not allowed'
+        linters: [ gomoddirectives ]
       - path: '_test\.go'
         linters:
           - bodyclose
@@ -441,3 +563,10 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+      # Exclude CLI and analysis files from forbidigo (they intentionally print to stdout)
+      - path: 'pkg/cli/cli\.go'
+        linters:
+          - forbidigo
+      - path: 'pkg/analysis/command\.go'
+        linters:
+          - forbidigo

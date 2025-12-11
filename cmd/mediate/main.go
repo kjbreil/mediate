@@ -18,6 +18,7 @@ import (
 	"github.com/kjbreil/mediate/pkg/service"
 )
 
+//nolint:funlen // main function handles CLI parsing, configuration loading, and service initialization
 func main() {
 	// Parse command-line flags
 	cliConfig := cli.ParseFlags()
@@ -52,6 +53,7 @@ func main() {
 	var c *config.Config
 	var err error
 
+	//nolint:nestif // configuration loading requires conditional logic for multiple scenarios
 	if cliConfig.ConfigFile != "" {
 		// Load configuration from specified file
 		logger.Info("Loading configuration from file", "file", cliConfig.ConfigFile)
@@ -79,10 +81,13 @@ func main() {
 		}
 	} else {
 		// Try to load from default location
-		home, err := os.UserHomeDir()
+		var home string
+		var statErr error
+		home, err = os.UserHomeDir()
 		if err == nil {
 			defaultPath := filepath.Join(home, ".config", "mediate", "config.yaml")
-			if _, err := os.Stat(defaultPath); err == nil {
+			_, statErr = os.Stat(defaultPath)
+			if statErr == nil {
 				logger.Info("Loading configuration from default location", "file", defaultPath)
 				c, err = config.LoadConfig(defaultPath)
 				if err != nil {
@@ -106,11 +111,11 @@ func main() {
 					},
 				},
 				Sonarr: config.Sonarr{
-					ApiKey: "67bd04cc551149188947a0024a7f5c1e",
+					APIKey: "67bd04cc551149188947a0024a7f5c1e",
 					URL:    "http://10.0.1.22:8989/show/",
 				},
 				Radarr: config.Radarr{
-					ApiKey: "e2eab479a088404387c7b1b48eab5287",
+					APIKey: "e2eab479a088404387c7b1b48eab5287",
 					URL:    "http://10.0.1.22:7878/film/",
 				},
 				Database: config.Database{
@@ -123,40 +128,45 @@ func main() {
 	// Check for analysis mode first
 	if cliConfig.Analyze || cliConfig.ScanDeleted {
 		// Initialize mediate for analysis
-		m, err := mediate.New(
+		var m *mediate.Mediate
+		m, err = mediate.New(
 			*c, // Dereference pointer to get the actual Config value
 			mediate.WithLogger(logger),
 		)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer m.Close()
 
 		// Load data for analysis
 		err = m.LoadDataSync()
 		if err != nil {
-			log.Fatal(err)
+			logger.Error("Failed to load data", "error", err)
+			m.Close()
+			os.Exit(1)
 		}
 
 		// Run analysis
 		runAnalysisMode(m, logger, cliConfig)
+		m.Close()
 		return
 	}
 
 	// Check operating mode
 	if cliConfig.Mode == "mcp" {
 		// Initialize mediate with fast loading for MCP mode
-		m, err := mediate.NewForMCP(
+		var m *mediate.Mediate
+		m, err = mediate.NewForMCP(
 			*c, // Dereference pointer to get the actual Config value
 			mediate.WithLogger(logger),
 		)
 		if err != nil {
-			log.Fatal(err)
+			logger.Error("Failed to initialize mediate", "error", err)
+			os.Exit(1)
 		}
-		defer m.Close()
 
 		// Run MCP server mode
 		runMCPServer(m, logger, cliConfig)
+		m.Close()
 		return
 	}
 
@@ -166,18 +176,21 @@ func main() {
 		mediate.WithLogger(logger),
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Failed to initialize mediate", "error", err)
+		os.Exit(1)
 	}
-	defer m.Close()
 
 	// Load data synchronously for job mode
 	err = m.LoadDataSync()
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Failed to load data", "error", err)
+		m.Close()
+		os.Exit(1)
 	}
 
 	// Traditional job mode
 	runJobMode(m, logger, cliConfig)
+	m.Close()
 }
 
 // runMCPServer runs the application in MCP server mode.
@@ -216,7 +229,9 @@ func runMCPServer(m *mediate.Mediate, logger *slog.Logger, cliConfig *cli.Config
 	// Shutdown
 	logger.Info("Shutting down MCP server")
 	cancel()
-	mcpServer.Close()
+	if err := mcpServer.Close(); err != nil {
+		logger.Error("Error closing MCP server", "error", err)
+	}
 	logger.Info("MCP server stopped")
 }
 

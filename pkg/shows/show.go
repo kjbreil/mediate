@@ -7,7 +7,7 @@ type Show struct {
 	PlexRatingKey string
 	Rating        float64
 	Ignore        bool
-	SonarrId      int64
+	SonarrID      int64
 	Continuing    bool
 	Episodes      Episodes `gorm:"foreignKey:ShowTvdbID"`
 	TvdbID        int      `gorm:"primaryKey"`

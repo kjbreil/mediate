@@ -38,13 +38,13 @@ func (p *Plex) Ignore(toIgnore string) bool {
 // Sonarr configuration.
 type Sonarr struct {
 	URL    string `yaml:"url"`
-	ApiKey string `yaml:"api_key"`
+	APIKey string `yaml:"api_key"`
 }
 
 // Radarr configuration.
 type Radarr struct {
 	URL    string `yaml:"url"`
-	ApiKey string `yaml:"api_key"`
+	APIKey string `yaml:"api_key"`
 }
 
 // Database configuration.
@@ -76,7 +76,8 @@ func LoadConfig(path string) (*Config, error) {
 
 	// Parse YAML
 	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
 		return nil, fmt.Errorf("error parsing config file: %w", err)
 	}
 
@@ -97,11 +98,11 @@ func CreateDefaultConfig(path string) error {
 		},
 		Sonarr: Sonarr{
 			URL:    "http://sonarr.example.com:8989",
-			ApiKey: "your-sonarr-api-key",
+			APIKey: "your-sonarr-api-key",
 		},
 		Radarr: Radarr{
 			URL:    "http://radarr.example.com:7878",
-			ApiKey: "your-radarr-api-key",
+			APIKey: "your-radarr-api-key",
 		},
 		Database: Database{
 			Path: "mediate.sqlite",
@@ -110,7 +111,7 @@ func CreateDefaultConfig(path string) error {
 
 	// Create directory if needed
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("error creating config directory: %w", err)
 	}
 
@@ -121,7 +122,8 @@ func CreateDefaultConfig(path string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	err = os.WriteFile(path, data, 0600)
+	if err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 

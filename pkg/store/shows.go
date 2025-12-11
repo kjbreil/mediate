@@ -13,7 +13,7 @@ func (s *Store) AddSonarrSeries(ser *sonarr.Series) (*shows.Show, error) {
 	s.First(&sh, ser.TvdbID)
 
 	sh.Title = ser.Title
-	sh.SonarrId = ser.ID
+	sh.SonarrID = ser.ID
 	sh.Continuing = ser.Status == "continuing"
 	sh.TvdbID = int(ser.TvdbID)
 
@@ -34,11 +34,11 @@ func (s *Store) AddSonarrEpisode(sh *shows.Show, ep *sonarr.Episode) (*shows.Epi
 	e.ShowTitle = sh.Title
 	e.ShowTvdbID = sh.TvdbID
 	e.Title = ep.Title
-	e.Season = int(ep.SeasonNumber)
-	e.SeasonEpisode = int(ep.SeasonNumber*1000 + ep.EpisodeNumber)
-	e.Episode = int(ep.EpisodeNumber)
-	e.SonarrId = ep.ID
-	e.SonarrFileId = ep.EpisodeFileID
+	e.Season = ep.SeasonNumber
+	e.SeasonEpisode = ep.SeasonNumber*1000 + ep.EpisodeNumber
+	e.Episode = ep.EpisodeNumber
+	e.SonarrID = ep.ID
+	e.SonarrFileID = ep.EpisodeFileID
 	e.Wanted = ep.Monitored
 	e.HasFile = ep.HasFile
 	e.AirDate = airDate
@@ -125,7 +125,7 @@ func (s *Store) MarkDownloading(ids ...int) {
 		Update("downloading", false)
 }
 
-func (s *Store) SonarrIds(ids ...int) shows.Episodes {
+func (s *Store) SonarrIDs(ids ...int) shows.Episodes {
 	var episodes shows.Episodes
 	s.Where("sonarr_id IN (?)", ids).Find(&episodes)
 	return episodes
