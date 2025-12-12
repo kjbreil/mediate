@@ -121,25 +121,36 @@ func NewForMCP(c config.Config, options ...Options) (*Mediate, error) {
 
 // LoadDataSync loads all data synchronously (for traditional job mode).
 func (m *Mediate) LoadDataSync() error {
+	m.logger.Info("Loading shows from Sonarr...")
+	start := time.Now()
 	err := m.loadShows()
 	if err != nil {
 		return err
 	}
+	m.logger.Info("Shows loaded from Sonarr", "duration", time.Since(start))
 
-	start := time.Now()
+	m.logger.Info("Refreshing Plex libraries...")
+	start = time.Now()
 	m.plex.PopulateLibraries()()
-	m.logger.Info("plex library refreshed", "duration", time.Since(start))
+	m.logger.Info("Plex libraries refreshed", "duration", time.Since(start))
 
+	m.logger.Info("Loading Plex show data...")
+	start = time.Now()
 	err = m.loadPlex()
 	if err != nil {
 		return err
 	}
+	m.logger.Info("Plex show data loaded", "duration", time.Since(start))
 
+	m.logger.Info("Loading movies...")
+	start = time.Now()
 	err = m.loadMovies()
 	if err != nil {
 		return err
 	}
+	m.logger.Info("Movies loaded", "duration", time.Since(start))
 
+	m.logger.Info("Data loading complete")
 	return nil
 }
 
