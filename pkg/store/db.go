@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kjbreil/go-plex/library"
+	"github.com/kjbreil/go-plex/pkg/library"
 	"github.com/kjbreil/mediate/pkg/shows"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver for database/sql
 	"gorm.io/driver/sqlite"

@@ -1,6 +1,6 @@
 package shows
 
-import "github.com/kjbreil/go-plex/library"
+import "github.com/kjbreil/go-plex/pkg/library"
 
 type Show struct {
 	Title         string

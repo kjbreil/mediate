@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/kjbreil/go-plex/library"
-	"github.com/kjbreil/go-plex/plex"
+	"github.com/kjbreil/go-plex/pkg/library"
+	"github.com/kjbreil/go-plex/pkg/plex"
 	"github.com/kjbreil/mediate/pkg/config"
 	"github.com/kjbreil/mediate/pkg/movies"
 	"github.com/kjbreil/mediate/pkg/shows"
