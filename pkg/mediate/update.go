@@ -38,7 +38,7 @@ func (m *Mediate) RecentlyWatched() shows.Episodes {
 // SetMonitored sets the unwatched episodes to monitored and if the show is continuing, sets the most recent season to monitored.
 func (m *Mediate) SetMonitored() {
 	for _, show := range *m.DB.GetShows() {
-		if show.Ignore || show.Title != "Workaholics" {
+		if show.Ignore {
 			continue
 		}
 
@@ -58,18 +58,22 @@ func (m *Mediate) SetMonitored() {
 }
 
 func (m *Mediate) handleContinuingShow(show *shows.Show) {
-	if show.Rating >= 5 && show.Rating <= 8 {
+	cfg := m.config.Automation
+	// Medium rated shows (between keep threshold and keep-all threshold)
+	if show.Rating >= cfg.KeepMinRating && show.Rating < cfg.KeepAllMinRating {
 		m.setupMediumRatedContinuingShow(show)
 		return
 	}
 
-	if show.Rating < 5 {
+	if show.Rating < cfg.KeepMinRating {
 		m.unmonitorLowRatedShow(show)
 	}
 }
 
 func (m *Mediate) handleEndedShow(show *shows.Show) {
-	if show.Rating < 9 {
+	cfg := m.config.Automation
+	// For ended shows below keep-all threshold, unmonitor and keep only pilot
+	if show.Rating < cfg.KeepAllMinRating {
 		if err := m.UnMonitorAll(show); err != nil {
 			return
 		}
@@ -81,7 +85,8 @@ func (m *Mediate) handleEndedShow(show *shows.Show) {
 		return
 	}
 
-	if show.Rating >= 9 {
+	// For highly rated ended shows, monitor all episodes
+	if show.Rating >= cfg.KeepAllMinRating {
 		_ = m.MonitorAll(show)
 	}
 }

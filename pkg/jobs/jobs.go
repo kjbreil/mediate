@@ -53,12 +53,14 @@ func (j *Jobs) MonitorJob() error {
 func (j *Jobs) DownloadJob() error {
 	j.logger.Info("Running download job")
 
+	cfg := j.mediate.Config().Automation
+
 	// Get recently watched episodes
 	episodes := j.mediate.RecentlyWatched()
 
 	for _, e := range episodes {
-		// Find the next 3 episodes that are aired but not downloaded
-		nextEpisodes := j.mediate.DB.NextXEpisodes(3, e).
+		// Find the next N episodes that are aired but not downloaded
+		nextEpisodes := j.mediate.DB.NextXEpisodes(cfg.EpisodesAhead, e).
 			Downloading(false).
 			Aired(true).
 			HasFile(false)
@@ -79,15 +81,22 @@ func (j *Jobs) DownloadJob() error {
 func (j *Jobs) DeleteJob() error {
 	j.logger.Info("Running delete job")
 
-	// Save original window duration and restore after
+	cfg := j.mediate.Config().Automation
 
+	// Save original values and restore after
 	originalWindowDuration := shows.WindowDuration
+	originalMaxShowRating := shows.MaxShowRating
 	defer func() {
 		shows.WindowDuration = originalWindowDuration //nolint:reassign // Restoring original value
+		shows.MaxShowRating = originalMaxShowRating   //nolint:reassign // Restoring original value
 	}()
 
-	// Delete watched episodes that can be deleted (5 day window)
-	shows.WindowDuration = time.Minute * 24 * 5 //nolint:reassign // Temporarily setting for finder function
+	// Set rating threshold from config
+	shows.MaxShowRating = cfg.DeleteMaxRating //nolint:reassign // Setting from config
+
+	// Delete watched episodes that can be deleted (watched cleanup window)
+	//nolint:reassign // Setting from config
+	shows.WindowDuration = time.Hour * 24 * time.Duration(cfg.WatchedCleanupDays)
 	watchedEpisodes := j.mediate.GetShows().Find(shows.Finders[shows.WatchedCanDelete])
 
 	if len(watchedEpisodes) > 0 {
@@ -98,8 +107,9 @@ func (j *Jobs) DeleteJob() error {
 		}
 	}
 
-	// Delete unwatched episodes that can be deleted (30 day window)
-	shows.WindowDuration = time.Minute * 24 * 30 //nolint:reassign // Temporarily setting for finder function
+	// Delete unwatched episodes that can be deleted (unwatched cleanup window)
+	//nolint:reassign // Setting from config
+	shows.WindowDuration = time.Hour * 24 * time.Duration(cfg.UnwatchedCleanupDays)
 	unwatchedEpisodes := j.mediate.GetShows().Find(shows.Finders[shows.NotWatchedCanDelete])
 
 	if len(unwatchedEpisodes) > 0 {
@@ -131,6 +141,8 @@ func (j *Jobs) RefreshJob() error {
 func (j *Jobs) PlexWatchJob() error {
 	j.logger.Info("Setting up Plex watch job")
 
+	cfg := j.mediate.Config().Automation
+
 	j.mediate.OnPlexPlaying(func(pp *mediate.PlexPlaying) {
 		ep := pp.Episode()
 		if ep == nil {
@@ -148,8 +160,8 @@ func (j *Jobs) PlexWatchJob() error {
 			// UpdateEpisode doesn't return an error
 			j.mediate.UpdateEpisode(ep)
 
-			// Download next 3 episodes that are aired but not downloaded
-			nextEpisodes := j.mediate.DB.NextXEpisodes(3, ep).
+			// Download next N episodes that are aired but not downloaded
+			nextEpisodes := j.mediate.DB.NextXEpisodes(cfg.EpisodesAhead, ep).
 				HasFile(false).
 				Aired(true).
 				Downloading(false)

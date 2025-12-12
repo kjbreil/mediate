@@ -121,6 +121,7 @@ func main() {
 				Database: config.Database{
 					Path: "mediate.sqlite",
 				},
+				Automation: config.DefaultAutomation(),
 			}
 		}
 	}

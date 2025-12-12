@@ -31,6 +31,7 @@ func TestNew(t *testing.T) {
 		Database: config.Database{
 			Path: tempDB,
 		},
+		Automation: config.DefaultAutomation(),
 	}
 
 	m, err := New(c)

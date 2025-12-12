@@ -10,10 +10,66 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	Plex     Plex     `yaml:"plex"`
-	Sonarr   Sonarr   `yaml:"sonarr"`
-	Radarr   Radarr   `yaml:"radarr"`
-	Database Database `yaml:"database"`
+	Plex       Plex       `yaml:"plex"`
+	Sonarr     Sonarr     `yaml:"sonarr"`
+	Radarr     Radarr     `yaml:"radarr"`
+	Database   Database   `yaml:"database"`
+	Automation Automation `yaml:"automation"`
+}
+
+// Automation configuration for media management behavior.
+type Automation struct {
+	DeleteMaxRating      float64 `yaml:"delete_max_rating"`      // Delete episodes if show rating <= this (default: 3.0)
+	KeepMinRating        float64 `yaml:"keep_min_rating"`        // Keep shows rated >= this selectively (default: 5.0)
+	KeepAllMinRating     float64 `yaml:"keep_all_min_rating"`    // Keep ALL episodes for shows rated >= this (default: 9.0)
+	WatchedCleanupDays   int     `yaml:"watched_cleanup_days"`   // Days after watching before deletion (default: 5)
+	UnwatchedCleanupDays int     `yaml:"unwatched_cleanup_days"` // Days for unwatched episode cleanup (default: 30)
+	EpisodesAhead        int     `yaml:"episodes_ahead"`         // Episodes to download ahead of current (default: 3)
+}
+
+// Default values for Automation config.
+const (
+	DefaultDeleteMaxRating      = 3.0
+	DefaultKeepMinRating        = 5.0
+	DefaultKeepAllMinRating     = 9.0
+	DefaultWatchedCleanupDays   = 5
+	DefaultUnwatchedCleanupDays = 30
+	DefaultEpisodesAhead        = 3
+)
+
+// DefaultAutomation returns an Automation config with default values.
+func DefaultAutomation() Automation {
+	return Automation{
+		DeleteMaxRating:      DefaultDeleteMaxRating,
+		KeepMinRating:        DefaultKeepMinRating,
+		KeepAllMinRating:     DefaultKeepAllMinRating,
+		WatchedCleanupDays:   DefaultWatchedCleanupDays,
+		UnwatchedCleanupDays: DefaultUnwatchedCleanupDays,
+		EpisodesAhead:        DefaultEpisodesAhead,
+	}
+}
+
+// ApplyDefaults fills in zero values with defaults.
+func (a *Automation) ApplyDefaults() {
+	defaults := DefaultAutomation()
+	if a.DeleteMaxRating == 0 {
+		a.DeleteMaxRating = defaults.DeleteMaxRating
+	}
+	if a.KeepMinRating == 0 {
+		a.KeepMinRating = defaults.KeepMinRating
+	}
+	if a.KeepAllMinRating == 0 {
+		a.KeepAllMinRating = defaults.KeepAllMinRating
+	}
+	if a.WatchedCleanupDays == 0 {
+		a.WatchedCleanupDays = defaults.WatchedCleanupDays
+	}
+	if a.UnwatchedCleanupDays == 0 {
+		a.UnwatchedCleanupDays = defaults.UnwatchedCleanupDays
+	}
+	if a.EpisodesAhead == 0 {
+		a.EpisodesAhead = defaults.EpisodesAhead
+	}
 }
 
 // Plex configuration.
@@ -107,6 +163,7 @@ func CreateDefaultConfig(path string) error {
 		Database: Database{
 			Path: "mediate.sqlite",
 		},
+		Automation: DefaultAutomation(),
 	}
 
 	// Create directory if needed

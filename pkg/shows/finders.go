@@ -4,10 +4,11 @@ import "time"
 
 type FindFunc func(show *Show, episode *Episode) bool
 
-//nolint:gochecknoglobals // Configuration variables used across finders
+//nolint:gochecknoglobals // Configuration variables used across finders - set by jobs from config
 var (
 	WindowDuration = time.Hour * 24 * 30
 	MaxShowRating  = 3.0
+	EpisodesAhead  = 3
 )
 
 type FinderKey int
@@ -54,20 +55,18 @@ var Finders = map[FinderKey]FindFunc{
 		return episode.IsPilot()
 	},
 	RecentlyWatchedEndOfSeason: func(show *Show, episode *Episode) bool {
-		if show.Title != "Workaholics" {
+		// Find recently watched episodes that need more downloaded
+		if !episode.Watched || episode.LastViewedAt == nil {
 			return false
 		}
-		if episode.Season != 3 {
+		if !episode.LastViewedAt.After(time.Now().Add(-WindowDuration)) {
 			return false
 		}
-		if episode.Episode != 16 {
+		if !episode.HasAired() {
 			return false
 		}
-		return episode.Watched &&
-			episode.LastViewedAt != nil &&
-			episode.LastViewedAt.After(time.Now().Add(-WindowDuration)) &&
-			!show.Episodes.XEpisodesAheadDownloaded(3, episode) &&
-			episode.HasAired()
+		// Check if we need to download more episodes ahead
+		return !show.Episodes.XEpisodesAheadDownloaded(EpisodesAhead, episode)
 	},
 }
 

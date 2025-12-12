@@ -21,3 +21,23 @@ radarr:
 # Database configuration
 database:
   path: "mediate.sqlite"
+
+# Automation configuration - controls media management behavior
+automation:
+  # Delete episodes if show rating is at or below this threshold (default: 3.0)
+  delete_max_rating: 3.0
+
+  # Keep shows rated at or above this threshold with selective monitoring (default: 5.0)
+  keep_min_rating: 5.0
+
+  # Keep ALL episodes for shows rated at or above this threshold (default: 9.0)
+  keep_all_min_rating: 9.0
+
+  # Days after watching an episode before it can be deleted (default: 5)
+  watched_cleanup_days: 5
+
+  # Days before unwatched episodes can be deleted (default: 30)
+  unwatched_cleanup_days: 30
+
+  # Number of episodes to download ahead of currently watched (default: 3)
+  episodes_ahead: 3
