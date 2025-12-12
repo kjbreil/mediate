@@ -200,3 +200,31 @@ func (m *Mediate) TriggerEpisodeSearch(episodeIDs []int64) error {
 
 	return err
 }
+
+// MarkSubsequentEpisodesUnwatched marks all episodes after the given episode as unwatched in Plex.
+func (m *Mediate) MarkSubsequentEpisodesUnwatched(ep *shows.Episode) (int, []error) {
+	episodes := m.DB.AllEpisodesAfter(ep)
+
+	var errors []error
+	count := 0
+
+	for _, e := range episodes {
+		if e.PlexRatingKey == "" {
+			continue
+		}
+
+		if err := m.plex.UnScrobble(e.PlexRatingKey); err != nil {
+			m.logger.Error("Failed to unscrobble episode",
+				"show", e.ShowTitle, "s", e.Season, "e", e.Episode, "error", err)
+			errors = append(errors, err)
+			continue
+		}
+
+		e.Watched = false
+		e.LastViewedAt = nil
+		m.DB.Save(e)
+		count++
+	}
+
+	return count, errors
+}

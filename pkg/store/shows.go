@@ -139,3 +139,11 @@ func (s *Store) NextXEpisodes(x int, ep *shows.Episode) shows.Episodes {
 		Find(&episodes)
 	return episodes
 }
+
+func (s *Store) AllEpisodesAfter(ep *shows.Episode) shows.Episodes {
+	var episodes shows.Episodes
+	s.Where("show_tvdb_id = ? AND season_episode > ?", ep.ShowTvdbID, ep.SeasonEpisode).
+		Order("season ASC, episode ASC").
+		Find(&episodes)
+	return episodes
+}

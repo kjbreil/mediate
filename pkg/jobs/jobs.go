@@ -9,6 +9,8 @@ import (
 	"github.com/kjbreil/mediate/pkg/shows"
 )
 
+const rewatchResetThreshold = 0.5
+
 // Jobs contains all the job functions.
 type Jobs struct {
 	mediate *mediate.Mediate
@@ -170,6 +172,23 @@ func (j *Jobs) PlexWatchJob() error {
 				// DownloadEpisodes doesn't return an error
 				j.mediate.DownloadEpisodes(nextEpisodes)
 			}
+		}
+
+		// Rewatch reset: mark subsequent episodes as unwatched after 50% progress
+		if pp.Progress() >= rewatchResetThreshold && !pp.RewatchResetTriggered() {
+			j.logger.Info("Rewatch detected, resetting subsequent episodes",
+				"show", ep.ShowTitle, "season", ep.Season, "episode", ep.Episode,
+				"progress", fmt.Sprintf("%.0f%%", pp.Progress()*100))
+
+			count, errs := j.mediate.MarkSubsequentEpisodesUnwatched(ep)
+			if count > 0 {
+				j.logger.Info("Reset subsequent episodes", "count", count)
+			}
+			if len(errs) > 0 {
+				j.logger.Warn("Some episodes failed to reset", "failed", len(errs))
+			}
+
+			pp.SetRewatchResetTriggered(true)
 		}
 	})
 

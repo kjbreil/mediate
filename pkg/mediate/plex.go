@@ -16,12 +16,13 @@ type plexActivity struct {
 }
 
 type PlexPlaying struct {
-	state   string
-	changed time.Time
-	episode *shows.Episode
-	viewed  time.Duration
-	m       sync.Mutex
-	Changed bool
+	state                 string
+	changed               time.Time
+	episode               *shows.Episode
+	viewed                time.Duration
+	m                     sync.Mutex
+	Changed               bool
+	rewatchResetTriggered bool
 }
 
 func (pp *PlexPlaying) Episode() *shows.Episode {
@@ -33,6 +34,21 @@ func (pp *PlexPlaying) TimeLeft() time.Duration {
 		return pp.episode.Duration - pp.viewed
 	}
 	return 0
+}
+
+func (pp *PlexPlaying) Progress() float64 {
+	if pp.episode == nil || pp.episode.Duration == 0 {
+		return 0
+	}
+	return float64(pp.viewed) / float64(pp.episode.Duration)
+}
+
+func (pp *PlexPlaying) RewatchResetTriggered() bool {
+	return pp.rewatchResetTriggered
+}
+
+func (pp *PlexPlaying) SetRewatchResetTriggered(triggered bool) {
+	pp.rewatchResetTriggered = triggered
 }
 
 func (m *Mediate) RefreshShowsEpisodes(episodes shows.Episodes) {
