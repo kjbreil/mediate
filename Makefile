@@ -87,6 +87,33 @@ docker:
 	@echo "Building Docker image..."
 	docker build -t mediate:$(VERSION) .
 
+# Version bumping - creates and pushes git tags to trigger CI
+.PHONY: patch minor major
+
+patch:
+	@latest=$$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"); \
+	major=$$(echo $$latest | sed 's/v//' | cut -d. -f1); \
+	minor=$$(echo $$latest | sed 's/v//' | cut -d. -f2); \
+	patch=$$(echo $$latest | sed 's/v//' | cut -d. -f3); \
+	new="v$$major.$$minor.$$((patch + 1))"; \
+	echo "Bumping $$latest -> $$new"; \
+	git tag -a $$new -m "Release $$new" && git push origin $$new
+
+minor:
+	@latest=$$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"); \
+	major=$$(echo $$latest | sed 's/v//' | cut -d. -f1); \
+	minor=$$(echo $$latest | sed 's/v//' | cut -d. -f2); \
+	new="v$$major.$$((minor + 1)).0"; \
+	echo "Bumping $$latest -> $$new"; \
+	git tag -a $$new -m "Release $$new" && git push origin $$new
+
+major:
+	@latest=$$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"); \
+	major=$$(echo $$latest | sed 's/v//' | cut -d. -f1); \
+	new="v$$((major + 1)).0.0"; \
+	echo "Bumping $$latest -> $$new"; \
+	git tag -a $$new -m "Release $$new" && git push origin $$new
+
 # Help target
 help:
 	@echo "Mediate Makefile Help"
@@ -103,6 +130,9 @@ help:
 	@echo "make windows      : Build for Windows (amd64)"
 	@echo "make docker       : Build Docker image"
 	@echo "make config       : Create default config in ~/.config/mediate"
+	@echo "make patch        : Bump patch version and push tag (v1.0.0 -> v1.0.1)"
+	@echo "make minor        : Bump minor version and push tag (v1.0.0 -> v1.1.0)"
+	@echo "make major        : Bump major version and push tag (v1.0.0 -> v2.0.0)"
 	@echo "make help         : Show this help"
 
 # Default target

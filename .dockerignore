@@ -1,0 +1,29 @@
+# Git
+.git/
+.gitignore
+
+# Build artifacts
+bin/
+
+# Documentation
+*.md
+LICENSE
+
+# Config files (except example)
+.golangci.yml
+.github/
+*.yaml
+!config.yaml.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test files
+*_test.go
+
+# OS files
+.DS_Store
+Thumbs.db
