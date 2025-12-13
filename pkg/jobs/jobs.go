@@ -174,6 +174,14 @@ func (j *Jobs) PlexWatchJob() error {
 			}
 		}
 
+		// Debug logging for rewatch check
+		j.logger.Debug("Rewatch check",
+			"show", ep.ShowTitle,
+			"progress", fmt.Sprintf("%.1f%%", pp.Progress()*100),
+			"duration", ep.Duration,
+			"viewed", pp.Viewed(),
+			"triggered", pp.RewatchResetTriggered())
+
 		// Rewatch reset: mark subsequent episodes as unwatched after 50% progress
 		if pp.Progress() >= rewatchResetThreshold && !pp.RewatchResetTriggered() {
 			j.logger.Info("Rewatch detected, resetting subsequent episodes",

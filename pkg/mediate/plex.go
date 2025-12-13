@@ -51,6 +51,10 @@ func (pp *PlexPlaying) SetRewatchResetTriggered(triggered bool) {
 	pp.rewatchResetTriggered = triggered
 }
 
+func (pp *PlexPlaying) Viewed() time.Duration {
+	return pp.viewed
+}
+
 func (m *Mediate) RefreshShowsEpisodes(episodes shows.Episodes) {
 	shows := make(map[int]*shows.Show)
 
