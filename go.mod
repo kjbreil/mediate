@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.5
 
 require (
-	github.com/kjbreil/go-plex v0.0.0-20251212233923-3b37b2dc72a8
+	github.com/kjbreil/go-plex v0.0.0-20251213020936-07490c812f13
 	github.com/mark3labs/mcp-go v0.43.2
 	github.com/mattn/go-sqlite3 v1.14.32
 	golift.io/starr v1.2.1
@@ -30,5 +30,3 @@ require (
 	golang.org/x/text v0.32.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
-
-replace github.com/kjbreil/go-plex => /Users/kjell/dev/go-plex
