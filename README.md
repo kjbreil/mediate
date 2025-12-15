@@ -38,38 +38,49 @@ Available jobs:
 - `refresh`: Updates metadata for shows and episodes
 
 ## Configuration
-Currently, configuration is mostly hardcoded in the application. Future versions will support external configuration files.
+Configuration is managed via YAML files. See `config.yaml.example` for available options.
 
-## Docker (Future Implementation)
+```bash
+# Create default config
+make config
+```
 
-### Docker Considerations
-For containerizing this application, the following should be addressed:
-- Configuration should be moved to environment variables or a mounted config file
-- Security-sensitive information (API keys, tokens) should not be hardcoded
-- SQLite database should be mounted as a volume for persistence
-- Network configuration to allow communication with Plex, Sonarr, and Radarr services
+## Docker
 
-### Planned Docker Implementation
-```dockerfile
-# TO BE IMPLEMENTED
-FROM golang:1.22-alpine AS build
-WORKDIR /app
-COPY . .
-RUN go build -o mediate ./cmd/mediate
+### Pull from GitHub Container Registry
 
-FROM alpine:latest
-WORKDIR /app
-COPY --from=build /app/mediate .
-VOLUME /app/data
-# Configuration will be provided via environment variables
-CMD ["./mediate", "--config=/app/config/config.yaml"]
+```bash
+docker pull ghcr.io/kjbreil/mediate:latest
+```
+
+### Run with Docker
+
+```bash
+docker run -d \
+  --name mediate \
+  -v /path/to/config.yaml:/app/config/config.yaml \
+  -v /path/to/data:/app/data \
+  ghcr.io/kjbreil/mediate:latest
+```
+
+### Build Locally
+
+```bash
+make docker
+```
+
+### Release a New Version
+
+Version tags trigger the CI pipeline to build and push Docker images:
+
+```bash
+make patch  # v1.0.0 -> v1.0.1
+make minor  # v1.0.0 -> v1.1.0
+make major  # v1.0.0 -> v2.0.0
 ```
 
 ## Known Issues
-- Configuration is currently hardcoded and needs to be extracted to a configuration file
-- API keys and tokens are exposed in the code and should be moved to a secure configuration
-- Some IP addresses and URLs are hardcoded and would need to be configurable for use in different environments
-- The config file loading functionality is not yet implemented (marked with TODO in main.go)
+- Some features are still in development
 
 ## License
 See the [LICENSE](LICENSE) file for details.
