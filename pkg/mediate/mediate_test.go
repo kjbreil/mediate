@@ -13,20 +13,20 @@ func TestNew(t *testing.T) {
 
 	c := config.Config{
 		Plex: config.Plex{
-			URL:   "http://plex1.kaygel.io:32400",
-			Token: "-HacSX44mXL1WHVACUZ5",
+			URL:   "http://plex.example.com:32400",
+			Token: "your-plex-token",
 			Ignored: []string{
 				"Kids TV Shows",
 				"Kids Movies",
 			},
 		},
 		Sonarr: config.Sonarr{
-			APIKey: "67bd04cc551149188947a0024a7f5c1e",
-			URL:    "http://10.0.1.22:8989/show/",
+			APIKey: "your-sonarr-api-key",
+			URL:    "http://sonarr.example.com:8989",
 		},
 		Radarr: config.Radarr{
-			APIKey: "e2eab479a088404387c7b1b48eab5287",
-			URL:    "http://10.0.1.22:7878/film/",
+			APIKey: "your-radarr-api-key",
+			URL:    "http://radarr.example.com:7878",
 		},
 		Database: config.Database{
 			Path: tempDB,
